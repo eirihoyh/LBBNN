@@ -11,7 +11,7 @@ R_FLOW_TYPE = 'IAF'
 def _log_pi(device, dtype):
     return torch.log(torch.tensor(math.pi, device=device, dtype=dtype))
 
-class FlowBayesianLinear(nn.Module):
+class BayesianLinearFlow(nn.Module):
     def __init__(
             self, 
             in_features: int, 

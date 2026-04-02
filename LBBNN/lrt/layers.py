@@ -7,7 +7,7 @@ def get_default_device() -> torch.device:
     return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class BayesianLinear(nn.Module):
+class BayesianLinearLRT(nn.Module):
     def __init__(
             self, 
             in_features: int, 

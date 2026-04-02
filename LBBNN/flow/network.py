@@ -3,9 +3,9 @@ from typing import Callable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .layers import FlowBayesianLinear
+from .layers import BayesianLinearFlow
 
-class FlowBayesianNetwork(nn.Module):
+class BayesianNetworkFlow(nn.Module):
     def __init__(
             self, 
             dim: int, 
@@ -22,12 +22,12 @@ class FlowBayesianNetwork(nn.Module):
         self.classification = classification
         self.multiclass = n_classes > 1
         self.act = act_func
-        self.linears = nn.ModuleList([FlowBayesianLinear(p, dim, a_prior=a_prior, num_transforms=num_transforms)])
+        self.linears = nn.ModuleList([BayesianLinearFlow(p, dim, a_prior=a_prior, num_transforms=num_transforms)])
         self.linears.extend(
             [
-                FlowBayesianLinear(dim + p, dim, a_prior=a_prior, num_transforms=num_transforms) 
+                BayesianLinearFlow(dim + p, dim, a_prior=a_prior, num_transforms=num_transforms) 
             for _ in range(hidden_layers - 1)])
-        self.linears.append(FlowBayesianLinear(dim + p, n_classes, a_prior=a_prior, num_transforms=num_transforms))
+        self.linears.append(BayesianLinearFlow(dim + p, n_classes, a_prior=a_prior, num_transforms=num_transforms))
         self.loss = nn.NLLLoss(reduction='sum') if (classification and self.multiclass) else (nn.BCELoss(reduction='sum') if classification else nn.MSELoss(reduction='sum'))
 
     def forward(
@@ -81,5 +81,5 @@ class FlowBayesianNetwork(nn.Module):
             out = self(x, ensemble=False)
             return torch.exp(out) if self.multiclass else out
 
-class InputSkipFlowNetwork(FlowBayesianNetwork):
+class InputSkipFlowNetwork(BayesianNetworkFlow):
     pass

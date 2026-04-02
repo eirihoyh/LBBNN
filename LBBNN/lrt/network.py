@@ -3,10 +3,10 @@ from typing import Callable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .layers import BayesianLinear
+from .layers import BayesianLinearLRT
 
 
-class BayesianNetwork(nn.Module):
+class BayesianNetworkLRT(nn.Module):
     def __init__(
             self, 
             dim: int, 
@@ -27,7 +27,7 @@ class BayesianNetwork(nn.Module):
         self.act = act_func
         nr_var = p if high_init_covariate_prob else None
         self.linears = nn.ModuleList(                      # input layer
-            [BayesianLinear(
+            [BayesianLinearLRT(
                 p, 
                 dim, 
                 a_prior=a_prior, 
@@ -37,7 +37,7 @@ class BayesianNetwork(nn.Module):
                 p=nr_var)])
         self.linears.extend(                               # hidden layers
             [
-                BayesianLinear(
+                BayesianLinearLRT(
                     dim + p, 
                     dim, a_prior=a_prior, 
                     std_prior=std_prior, 
@@ -46,7 +46,7 @@ class BayesianNetwork(nn.Module):
                     p=nr_var) 
             for _ in range(hidden_layers - 1)])
         self.linears.append(                               # output layer
-            BayesianLinear(
+            BayesianLinearLRT(
                 dim + p, 
                 n_classes, 
                 a_prior=a_prior, 
@@ -108,5 +108,5 @@ class BayesianNetwork(nn.Module):
             return torch.exp(out) if self.multiclass else out
 
 
-class InputSkipLRTNetwork(BayesianNetwork):
+class InputSkipLRTNetwork(BayesianNetworkLRT):
     pass

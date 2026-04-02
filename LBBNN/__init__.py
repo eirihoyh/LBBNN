@@ -1,5 +1,5 @@
-from .layers import BayesianLinear, get_default_device
-from .network import BayesianNetwork, InputSkipLRTNetwork
+# from .lrt.layers import BayesianLinear, get_default_device
+# from .lrt.network import BayesianNetwork, InputSkipLRTNetwork
 from .data import create_data_unif, create_bsr_data, get_data
 from .inspection import (
     nr_hidden_layers, weight_matrices, weight_matrices_numpy, weight_matrices_std,
@@ -14,12 +14,13 @@ from .explain import (
     local_explain_relu_magnitude, local_explain_piecewise_linear_act,
 )
 from .training import train_epoch, validate, test_ensemble
-from .flow import PropagateFlow, RNVP, IAF, FlowBayesianLinear, FlowBayesianNetwork, InputSkipFlowNetwork
+from .flow import PropagateFlow, RNVP, IAF, BayesianLinearFlow, BayesianNetworkFlow, InputSkipFlowNetwork
+from .lrt import BayesianLinearLRT, BayesianNetworkLRT, InputSkipLRTNetwork
 from . import plotting
 
 __all__ = [
-    "BayesianLinear", "BayesianNetwork", "InputSkipLRTNetwork",
-    "PropagateFlow", "RNVP", "IAF", "FlowBayesianLinear", "FlowBayesianNetwork", "InputSkipFlowNetwork",
+    "BayesianLinearLRT", "BayesianNetworkLRT", "InputSkipLRTNetwork",
+    "PropagateFlow", "RNVP", "IAF", "BayesianLinearFlow", "BayesianNetworkFlow", "InputSkipFlowNetwork",
     "get_default_device", "create_data_unif", "create_bsr_data", "nr_hidden_layers", "weight_matrices",
     "weight_matrices_numpy", "weight_matrices_std", "weight_matrices_std_numpy", "get_alphas",
     "get_alphas_numpy", "clean_alpha", "clean_alpha_class", "get_active_weights",

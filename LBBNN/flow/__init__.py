@@ -1,5 +1,5 @@
 from .transforms import PropagateFlow, RNVP, IAF
-from .layers import FlowBayesianLinear
-from .network import FlowBayesianNetwork, InputSkipFlowNetwork
+from .layers import BayesianLinearFlow
+from .network import BayesianNetworkFlow, InputSkipFlowNetwork
 
-__all__ = ["PropagateFlow", "RNVP", "IAF", "FlowBayesianLinear", "FlowBayesianNetwork", "InputSkipFlowNetwork"]
+__all__ = ["PropagateFlow", "RNVP", "IAF", "BayesianLinearFlow", "BayesianNetworkFlow", "InputSkipFlowNetwork"]
