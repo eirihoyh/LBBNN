@@ -1,57 +1,159 @@
 from __future__ import annotations
+
+from typing import Sequence
+
 import numpy as np
+from numpy.random import Generator
+from numpy.typing import NDArray
 
-def get_data(n=10_000, beta=np.array([1,5]), classification=True, non_lin=False):
 
-    # Generate some feature data
+def get_data(
+    n: int = 10_000,
+    beta: NDArray[np.float64] | Sequence[float] = np.array([1.0, 5.0]),
+    classification: bool = True,
+    non_lin: bool = False,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Generate a simple one-dimensional synthetic dataset.
+
+    Args:
+        n: Number of observations.
+        beta: Coefficients used to generate the target.
+        classification: Whether to convert the target into binary labels.
+        non_lin: Whether to use a quadratic relationship instead of a linear one.
+
+    Returns:
+        A tuple containing:
+            - The feature matrix without intercept.
+            - The generated target values or class labels.
+            - The feature matrix with an intercept column.
+    """
+    beta_array = np.asarray(beta, dtype=float)
+
     np.random.seed(42)
-    X = np.random.randn(n,1)  # 100 samples, 2 features
-    # Add intercept term
-    X_with_intercept = np.hstack([np.ones((X.shape[0], 1)), X])
+    x = np.random.randn(n, 1)
+    x_with_intercept = np.hstack([np.ones((x.shape[0], 1)), x])
 
     if non_lin:
-        # Non-linear relationship
-        y = beta[0] + beta[1]*(X**2).flatten()
+        y = beta_array[0] + beta_array[1] * (x**2).flatten()
     else:
-        # Linear relationship
-        y = beta[0] + beta[1]*X.flatten()
-    # # Compute linear predictor
-    # y = X_with_intercept @ beta
+        y = beta_array[0] + beta_array[1] * x.flatten()
 
     if classification:
-        # Apply custom logic function to get probabilities
-        p = 1/(1+np.exp(-y))
-        # Sample from Bernoulli distribution
-        y = np.random.binomial(1, p)
+        probabilities = 1.0 / (1.0 + np.exp(-y))
+        y = np.random.binomial(1, probabilities).astype(float)
+
+    return x.astype(float), y.astype(float), x_with_intercept.astype(float)
 
 
-    return X, y, X_with_intercept
+def create_data_unif(
+    n: int,
+    beta: Sequence[float] = (10, 1, 1, 1, 1),
+    dep_level: float = 0.5,
+    classification: bool = False,
+    non_lin: bool = False,
+    seed: int | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Generate a synthetic dataset with uniformly distributed covariates.
 
+    Args:
+        n: Number of observations.
+        beta: Coefficients used to generate the target.
+        dep_level: Dependency level between `x1` and `x3`.
+        classification: Whether to convert the target into binary labels.
+        non_lin: Whether to use a nonlinear target function.
+        seed: Random seed for reproducibility.
 
-def create_data_unif(n: int, beta=(10,1,1,1,1), dep_level: float = 0.5, classification: bool = False, non_lin: bool = False, seed: int | None = None):
+    Returns:
+        A tuple containing:
+            - The generated target values or class labels.
+            - The design matrix including an intercept column.
+    """
     rng = np.random.default_rng(seed)
+    beta_array = np.asarray(beta, dtype=float)
+
     x0 = np.ones(n)
-    x1 = rng.uniform(-10,10,n); x2 = rng.uniform(-10,10,n); x3 = rng.uniform(-10,10,n); x4 = rng.uniform(-10,10,n)
-    x3 = dep_level * x1 + (1 - dep_level) * x3
-    y = beta[0] + beta[1] * x1 + beta[2] * x2 if not non_lin else beta[0] + beta[1]*x1 + beta[2]*x2 + beta[3]*x1**2 + beta[4]*x2**2 + x1*x2
-    y = y + rng.normal(scale=0.01, size=n)
-    if classification:
-        y = y - y.min(); y = y / max(y.max(), 1e-12); y = (y > np.median(y)).astype(int)
-    return y, np.column_stack((x0,x1,x2,x3,x4))
+    x1 = rng.uniform(-10.0, 10.0, n)
+    x2 = rng.uniform(-10.0, 10.0, n)
+    x3 = rng.uniform(-10.0, 10.0, n)
+    x4 = rng.uniform(-10.0, 10.0, n)
 
-def create_bsr_data(n: int, urange=(-3,3), func: int = 1, seed: int | None = None):
-    rng = np.random.default_rng(seed)
-    l,u = urange[0], urange[1]
-    x1 = np.linspace(-1.5,1.5,n); x2 = rng.uniform(l,u,n)
-    if func == 1: y = 2.5*x1**4 - 1.3*x1**3 + 0.5*x2**2 - 1.7*x2
-    elif func == 2: y = 8*x1**2 + 8*x2**3 - 15
-    elif func == 3: y = 0.2*x1**3 - 0.5*x1 + 0.5*x2**3 - 1.2*x2
-    elif func == 4: y = 1.5*np.exp(x1) + 5*np.cos(x2)
-    elif func == 5: y = 6*np.sin(x1)*np.cos(x2)
-    elif func == 6: y = 1.35*x1*x2 + 5.5*np.sin((x1-1)*(x2-1))
+    x3 = dep_level * x1 + (1.0 - dep_level) * x3
+
+    if non_lin:
+        y = (
+            beta_array[0]
+            + beta_array[1] * x1
+            + beta_array[2] * x2
+            + beta_array[3] * x1**2
+            + beta_array[4] * x2**2
+            + x1 * x2
+        )
+    else:
+        y = beta_array[0] + beta_array[1] * x1 + beta_array[2] * x2
+
+    y = y + rng.normal(scale=0.01, size=n)
+
+    if classification:
+        y = y - y.min()
+        y = y / max(y.max(), 1e-12)
+        y = (y > np.median(y)).astype(float)
+
+    x = np.column_stack((x0, x1, x2, x3, x4))
+
+    return y.astype(float), x.astype(float)
+
+
+def create_bsr_data(
+    n: int,
+    urange: tuple[float, float] = (-3, 3),
+    func: int = 1,
+    seed: int | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Generate benchmark-style synthetic regression data.
+
+    Args:
+        n: Number of observations.
+        urange: Range used for uniform sampling of the second feature.
+        func: Index selecting the target-generating function.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        A tuple containing:
+            - The generated target values.
+            - The feature matrix with two columns.
+    """
+    rng: Generator = np.random.default_rng(seed)
+    lower, upper = urange
+
+    x1 = np.linspace(-1.5, 1.5, n)
+    x2 = rng.uniform(lower, upper, n)
+
+    if func == 1:
+        y = 2.5 * x1**4 - 1.3 * x1**3 + 0.5 * x2**2 - 1.7 * x2
+    elif func == 2:
+        y = 8.0 * x1**2 + 8.0 * x2**3 - 15.0
+    elif func == 3:
+        y = 0.2 * x1**3 - 0.5 * x1 + 0.5 * x2**3 - 1.2 * x2
+    elif func == 4:
+        y = 1.5 * np.exp(x1) + 5.0 * np.cos(x2)
+    elif func == 5:
+        y = 6.0 * np.sin(x1) * np.cos(x2)
+    elif func == 6:
+        y = 1.35 * x1 * x2 + 5.5 * np.sin((x1 - 1.0) * (x2 - 1.0))
     elif func == 7:
-        rand0 = rng.normal(scale=0.02, size=n); y = x1 + 0.3*np.sin(2*np.pi*(x1+rand0)) + 0.3*np.sin(4*np.pi*(x1+rand0)) + rand0
+        noise = rng.normal(scale=0.02, size=n)
+        y = (
+            x1
+            + 0.3 * np.sin(2.0 * np.pi * (x1 + noise))
+            + 0.3 * np.sin(4.0 * np.pi * (x1 + noise))
+            + noise
+        )
     elif func == 8:
-        rand0 = rng.normal(scale=1.0, size=n); y = 10*np.sin(2*np.pi*x1) + rand0
-    else: raise ValueError('func must be in {1,2,3,4,5,6,7,8}')
-    return y, np.column_stack((x1,x2))
+        noise = rng.normal(scale=1.0, size=n)
+        y = 10.0 * np.sin(2.0 * np.pi * x1) + noise
+    else:
+        raise ValueError("func must be in {1, 2, 3, 4, 5, 6, 7, 8}")
+
+    x = np.column_stack((x1, x2))
+
+    return y.astype(float), x.astype(float)
