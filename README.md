@@ -1,2 +1,3 @@
 # LBBNN
-LBBNN - Latent Binary Bayesian Neural Networks using PyTorch
+
+Python package for LBBNNs with input skip-connections.
