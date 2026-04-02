@@ -1,0 +1,85 @@
+from __future__ import annotations
+from typing import Callable
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from .layers import FlowBayesianLinear
+
+class FlowBayesianNetwork(nn.Module):
+    def __init__(
+            self, 
+            dim: int, 
+            p: int, 
+            hidden_layers: int, 
+            a_prior: float = 0.05, 
+            num_transforms: int = 2, 
+            classification: bool = True, 
+            n_classes: int = 1, 
+            act_func: Callable[[torch.Tensor], torch.Tensor] = torch.sigmoid) -> None:
+        
+        super().__init__()
+        self.p = p
+        self.classification = classification
+        self.multiclass = n_classes > 1
+        self.act = act_func
+        self.linears = nn.ModuleList([FlowBayesianLinear(p, dim, a_prior=a_prior, num_transforms=num_transforms)])
+        self.linears.extend(
+            [
+                FlowBayesianLinear(dim + p, dim, a_prior=a_prior, num_transforms=num_transforms) 
+            for _ in range(hidden_layers - 1)])
+        self.linears.append(FlowBayesianLinear(dim + p, n_classes, a_prior=a_prior, num_transforms=num_transforms))
+        self.loss = nn.NLLLoss(reduction='sum') if (classification and self.multiclass) else (nn.BCELoss(reduction='sum') if classification else nn.MSELoss(reduction='sum'))
+
+    def forward(
+            self, x: torch.Tensor, 
+            sample: bool = False, 
+            ensemble: bool = True, 
+            calculate_log_probs: bool = False, 
+            post_train: bool = False) -> torch.Tensor:
+        
+        x_input = x.view(-1, self.p)
+        x_hidden = self.act(self.linears[0](x_input, ensemble=ensemble, post_train=post_train))
+        i = 1
+        for layer in self.linears[1:-1]:
+            x_hidden = self.act(layer(torch.cat((x_hidden, x_input), dim=1), ensemble=ensemble, post_train=post_train))
+            i += 1
+        logits = self.linears[i](torch.cat((x_hidden, x_input), dim=1), ensemble=ensemble, post_train=post_train)
+        if self.classification:
+            return F.log_softmax(logits, dim=1) if self.multiclass else torch.sigmoid(logits)
+        return logits
+
+    def forward_preact(
+            self, 
+            x: torch.Tensor, 
+            sample: bool = False, 
+            ensemble: bool = False, 
+            calculate_log_probs: bool = False, 
+            post_train: bool = False) -> torch.Tensor:
+        
+        x_input = x.view(-1, self.p)
+        x_hidden = self.act(self.linears[0](x_input, ensemble=ensemble, post_train=post_train))
+        i = 1
+        for layer in self.linears[1:-1]:
+            x_hidden = self.act(layer(torch.cat((x_hidden, x_input), dim=1), ensemble=ensemble, post_train=post_train))
+            i += 1
+        return self.linears[i](torch.cat((x_hidden, x_input), dim=1), ensemble=ensemble, post_train=post_train)
+
+    def kl(self) -> torch.Tensor:
+        return sum(layer.kl_div() for layer in self.linears)
+
+    def predict(self, x: torch.Tensor, threshold: float = 0.5) -> torch.Tensor:
+        self.eval()
+        with torch.no_grad():
+            out = self(x, ensemble=False)
+            if self.classification:
+                return out.argmax(dim=1) if self.multiclass else (out >= threshold).float().view(-1)
+            return out.view(-1)
+
+    def predict_proba(self, x: torch.Tensor) -> torch.Tensor:
+        self.eval()
+        with torch.no_grad():
+            out = self(x, ensemble=False)
+            return torch.exp(out) if self.multiclass else out
+
+class InputSkipFlowNetwork(FlowBayesianNetwork):
+    pass
