@@ -133,7 +133,6 @@ def validate(
     multiclass: bool = False,
     reg: bool = False,
     verbose: bool = False,
-    post_train: bool = False,
 ) -> tuple[float, float, float]:
     """Evaluate the network on validation data.
 
@@ -144,7 +143,6 @@ def validate(
         multiclass: Whether the task is multiclass classification.
         reg: Whether the task is regression.
         verbose: Whether to print validation metrics.
-        post_train: Whether to use post-training inference behavior.
 
     Returns:
         A tuple containing NLL, total loss, and the validation metric.
@@ -159,7 +157,6 @@ def validate(
             x_val,
             ensemble=False,
             calculate_log_probs=True,
-            post_train=post_train,
         )
 
         if multiclass:
@@ -205,7 +202,6 @@ def test_ensemble(
     classes: int = 1,
     reg: bool = True,
     verbose: bool = False,
-    post_train: bool = False,
     multiclass: bool = False,
 ) -> tuple[list[float], list[float]]:
     """Evaluate ensemble and median-style predictions on test data.
@@ -217,8 +213,6 @@ def test_ensemble(
         samples: Number of stochastic forward passes.
         classes: Number of output classes or output dimension.
         reg: Whether the task is regression.
-        verbose: Whether to print evaluation details.
-        post_train: Included for API compatibility.
         multiclass: Whether the task is multiclass classification.
 
     Returns:
@@ -226,8 +220,6 @@ def test_ensemble(
             - Ensemble mean metrics.
             - Median-style metrics based on deterministic forward passes.
     """
-    del verbose
-    del post_train
 
     net.eval()
 
