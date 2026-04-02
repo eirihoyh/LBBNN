@@ -26,6 +26,7 @@ class BayesianNetworkLRT(nn.Module):
         lower_init_lambda: float = -10.0,
         upper_init_lambda: float = -7.0,
         high_init_covariate_prob: bool = False,
+        custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
         """Initialize the Bayesian network.
 
@@ -99,12 +100,15 @@ class BayesianNetworkLRT(nn.Module):
             )
         )
 
-        if classification and self.multiclass:
-            self.loss = nn.NLLLoss(reduction="sum")
-        elif classification:
-            self.loss = nn.BCELoss(reduction="sum")
-        else:
-            self.loss = nn.MSELoss(reduction="sum")
+        if custom_loss:
+            self.loss = custom_loss
+        else: 
+            if classification and self.multiclass:
+                self.loss = nn.NLLLoss(reduction="sum")
+            elif classification:
+                self.loss = nn.BCELoss(reduction="sum")
+            else:
+                self.loss = nn.MSELoss(reduction="sum")
 
     def _forward_logits(
         self,
