@@ -1,103 +1,252 @@
 from __future__ import annotations
+
+from typing import Any
+
 from ._common import ensure_parent, get_graphviz_digraph
 from .. import inspection as insp
 
 
-def plot_whole_path_graph(
-        alpha_list, 
-        all_connections, 
-        save_path, 
-        show: bool = False):
+def _format_node_name(
+    index: int,
+    layer_ind: int,
+    dim: int,
+    n_layers: int,
+    layer_names: list[str],
+) -> str:
+    """Create a readable node name for a graph node.
 
+    Args:
+        index: Node index within the layer connection matrix.
+        layer_ind: Index of the current layer.
+        dim: Width of the non-skip part of the layer.
+        n_layers: Total number of graph layers including input and output.
+        layer_names: Human-readable names for each layer.
+
+    Returns:
+        A string representing the graph node name.
+    """
+    if index >= dim and layer_ind < n_layers:
+        return f"I_{index - dim}"
+
+    return f"{layer_names[layer_ind]}_{index}"
+
+
+def _build_path_graph(
+    value_list: list[Any],
+    all_connections: list[Any],
+    save_path: str,
+    label_prefix: str,
+    show: bool = False,
+) -> Any:
+    """Build and save a graph of active paths.
+
+    Args:
+        value_list: List of tensors or arrays containing edge values.
+        all_connections: List of active connections per layer.
+        save_path: Output path for the rendered graph.
+        label_prefix: Prefix used in edge labels, e.g. ``'α'`` or ``'w'``.
+        show: Whether to open the rendered graph after saving.
+
+    Returns:
+        The rendered Graphviz digraph object.
+    """
     Digraph = get_graphviz_digraph()
     dot = Digraph("All paths")
-    n_layers = len(alpha_list) + 1
-    dim = alpha_list[0].shape[0]
-    layer_list = insp.create_layer_name_list(n_layers=n_layers)
-    seen = []
-    for layer_ind, connection in enumerate(all_connections):
-        for t, f in connection:
-            t, f = int(t), int(f)
-            from_node = f"I_{f-dim}" if f >= dim else f"{layer_list[layer_ind]}_{f}"
-            to_node = f"I_{t-dim}" if (t >= dim and layer_ind + 1 < n_layers) else f"{layer_list[layer_ind+1]}_{t}"
-            if from_node not in seen: dot.node(from_node); seen.append(from_node)
-            if to_node not in seen: dot.node(to_node); seen.append(to_node)
-            dot.edge(from_node, to_node, label=f"α={float(alpha_list[layer_ind][t][f]):.2f}")
+
+    n_layers = len(value_list) + 1
+    dim = value_list[0].shape[0]
+    layer_names = insp.create_layer_name_list(n_layers=n_layers)
+    seen_nodes: set[str] = set()
+
+    for layer_ind, connections in enumerate(all_connections):
+        for to_idx, from_idx in connections:
+            to_idx = int(to_idx)
+            from_idx = int(from_idx)
+
+            from_node = _format_node_name(
+                index=from_idx,
+                layer_ind=layer_ind,
+                dim=dim,
+                n_layers=n_layers,
+                layer_names=layer_names,
+            )
+            to_node = _format_node_name(
+                index=to_idx,
+                layer_ind=layer_ind + 1,
+                dim=dim,
+                n_layers=n_layers,
+                layer_names=layer_names,
+            )
+
+            if from_node not in seen_nodes:
+                dot.node(from_node)
+                seen_nodes.add(from_node)
+
+            if to_node not in seen_nodes:
+                dot.node(to_node)
+                seen_nodes.add(to_node)
+
+            value = float(value_list[layer_ind][to_idx][from_idx])
+            dot.edge(from_node, to_node, label=f"{label_prefix}={value:.2f}")
+
     dot.node("All paths", shape="Msquare")
     dot.format = "png"
     dot.strict = True
+
     ensure_parent(save_path)
     dot.render(str(save_path), view=show)
+
     return dot
+
+
+def plot_whole_path_graph(
+    alpha_list: list[Any],
+    all_connections: list[Any],
+    save_path: str,
+    show: bool = False,
+) -> Any:
+    """Plot all active paths using alpha values as edge labels.
+
+    Args:
+        alpha_list: List of alpha tensors or arrays per layer.
+        all_connections: List of active connections per layer.
+        save_path: Output path for the rendered graph.
+        show: Whether to open the rendered graph after saving.
+
+    Returns:
+        The rendered Graphviz digraph object.
+    """
+    return _build_path_graph(
+        value_list=alpha_list,
+        all_connections=all_connections,
+        save_path=save_path,
+        label_prefix="α",
+        show=show,
+    )
 
 
 def plot_whole_path_graph_weight(
-        weight_list, 
-        all_connections, 
-        save_path, 
-        show: bool = False):
-    
-    Digraph = get_graphviz_digraph()
-    dot = Digraph("All paths")
-    n_layers = len(weight_list) + 1
-    dim = weight_list[0].shape[0]
-    layer_list = insp.create_layer_name_list(n_layers=n_layers)
-    seen = []
-    for layer_ind, connection in enumerate(all_connections):
-        for t, f in connection:
-            t, f = int(t), int(f)
-            from_node = f"I_{f-dim}" if f >= dim else f"{layer_list[layer_ind]}_{f}"
-            to_node = f"I_{t-dim}" if (t >= dim and layer_ind + 1 < n_layers) else f"{layer_list[layer_ind+1]}_{t}"
-            if from_node not in seen: dot.node(from_node); seen.append(from_node)
-            if to_node not in seen: dot.node(to_node); seen.append(to_node)
-            dot.edge(from_node, to_node, label=f"w={float(weight_list[layer_ind][t][f]):.2f}")
-    dot.node("All paths", shape="Msquare")
-    dot.format = "png"
-    dot.strict = True
-    ensure_parent(save_path)
-    dot.render(str(save_path), view=show)
-    return dot
+    weight_list: list[Any],
+    all_connections: list[Any],
+    save_path: str,
+    show: bool = False,
+) -> Any:
+    """Plot all active paths using weight values as edge labels.
+
+    Args:
+        weight_list: List of weight matrices per layer.
+        all_connections: List of active connections per layer.
+        save_path: Output path for the rendered graph.
+        show: Whether to open the rendered graph after saving.
+
+    Returns:
+        The rendered Graphviz digraph object.
+    """
+    return _build_path_graph(
+        value_list=weight_list,
+        all_connections=all_connections,
+        save_path=save_path,
+        label_prefix="w",
+        show=show,
+    )
 
 
 def run_path_graph(
-        net, 
-        threshold: float = 0.5, 
-        save_path: str = "path_graphs/all_paths_input_skip", 
-        show: bool = False):
-    
+    net: Any,
+    threshold: float = 0.5,
+    save_path: str = "path_graphs/all_paths_input_skip",
+    show: bool = False,
+) -> Any:
+    """Generate and save a path graph using network alpha values.
+
+    Args:
+        net: Trained network object.
+        threshold: Threshold used to clean alpha values.
+        save_path: Output path for the rendered graph.
+        show: Whether to open the rendered graph after saving.
+
+    Returns:
+        The rendered Graphviz digraph object.
+    """
     alpha_list = insp.get_alphas(net)
     clean_alpha_list = insp.clean_alpha(net, threshold)
     all_connections = insp.get_active_weights(clean_alpha_list)
-    return plot_whole_path_graph(alpha_list, all_connections, save_path=save_path, show=show)
+
+    return plot_whole_path_graph(
+        alpha_list=alpha_list,
+        all_connections=all_connections,
+        save_path=save_path,
+        show=show,
+    )
 
 
 def run_path_graph_weight(
-        net, 
-        threshold: float = 0.5, 
-        save_path: str = "path_graphs/all_paths_input_skip", 
-        show: bool = False, 
-        flow: bool = False):
-    
+    net: Any,
+    threshold: float = 0.5,
+    save_path: str = "path_graphs/all_paths_input_skip",
+    show: bool = False,
+    flow: bool = False,
+) -> Any:
+    """Generate and save a path graph using network weights.
+
+    Args:
+        net: Trained network object.
+        threshold: Threshold used to clean alpha values.
+        save_path: Output path for the rendered graph.
+        show: Whether to open the rendered graph after saving.
+        flow: Whether to apply flow-adjusted weights.
+
+    Returns:
+        The rendered Graphviz digraph object.
+    """
     weight_list = insp.weight_matrices_numpy(net, flow=flow)
     clean_alpha_list = insp.clean_alpha(net, threshold)
     all_connections = insp.get_active_weights(clean_alpha_list)
-    return plot_whole_path_graph_weight(weight_list, all_connections, save_path=save_path, show=show)
+
+    return plot_whole_path_graph_weight(
+        weight_list=weight_list,
+        all_connections=all_connections,
+        save_path=save_path,
+        show=show,
+    )
 
 
 def plot_path_individual_classes(
-        net, 
-        classes: int, 
-        path: str = "individual_classes", 
-        show: bool = False):
-    saved = []
-    for c in range(classes):
-        include_list = [True] * classes
-        include_list[c] = False
-        a = insp.get_alphas(net)
-        a[-1][include_list, :] = 0
-        clean_a = insp.clean_alpha(net, 0.5, alpha_list=a)
-        all_connections = insp.get_active_weights(clean_a)
-        target = f"{path}/class{c}"
-        plot_whole_path_graph(a, all_connections, save_path=target, show=show)
-        saved.append(target + ".png")
-    return saved
+    net: Any,
+    classes: int,
+    path: str = "individual_classes",
+    show: bool = False,
+) -> list[str]:
+    """Generate and save separate path graphs for each output class.
+
+    Args:
+        net: Trained network object.
+        classes: Number of output classes.
+        path: Base directory for saved graphs.
+        show: Whether to open each rendered graph after saving.
+
+    Returns:
+        A list of saved image paths.
+    """
+    saved_paths: list[str] = []
+
+    for class_idx in range(classes):
+        include_mask = [True] * classes
+        include_mask[class_idx] = False
+
+        alphas = insp.get_alphas(net)
+        alphas[-1][include_mask, :] = 0
+
+        clean_alphas = insp.clean_alpha(net, 0.5, alpha_list=alphas)
+        all_connections = insp.get_active_weights(clean_alphas)
+
+        target_path = f"{path}/class{class_idx}"
+        plot_whole_path_graph(
+            alpha_list=alphas,
+            all_connections=all_connections,
+            save_path=target_path,
+            show=show,
+        )
+        saved_paths.append(f"{target_path}.png")
+
+    return saved_paths
