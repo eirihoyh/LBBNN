@@ -53,11 +53,12 @@ class PropagateFlow(nn.Module):
             A tuple containing the transformed tensor and the summed
             log-determinant.
         """
-        logdet = torch.zeros(z.shape[0], device=z.device, dtype=z.dtype)
+        # logdet = torch.zeros(z.shape[0], device=z.device, dtype=z.dtype)
+        logdet = 0
 
         for transform in self.transforms:
             z = transform(z)
-            logdet = logdet + transform.log_det()
+            logdet += transform.log_det()
 
         return z, logdet
 

@@ -11,7 +11,7 @@ from .layers import BayesianLinearFlow
 
 
 class BayesianNetworkFlow(nn.Module):
-    """Bayesian neural network with input skip connections and flow-based layers."""
+    """Bayesian neural network with flow-based layers and input skip connections."""
 
     def __init__(
         self,
@@ -23,12 +23,8 @@ class BayesianNetworkFlow(nn.Module):
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
-        custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
         """Initialize the flow-based Bayesian network.
-
-        NOTE: First column of input is assmued to only consist of ones 
-            (works as the intercept/bias).
 
         Args:
             dim: Number of hidden units in each hidden layer.
@@ -39,6 +35,9 @@ class BayesianNetworkFlow(nn.Module):
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in hidden layers.
+
+        Returns:
+            None.
         """
         super().__init__()
 
@@ -78,15 +77,56 @@ class BayesianNetworkFlow(nn.Module):
                 num_transforms=num_transforms,
             )
         )
-        if custom_loss:
-            self.loss = custom_loss
-        else: 
-            if classification and self.multiclass:
-                self.loss = nn.NLLLoss(reduction="sum")
-            elif classification:
-                self.loss = nn.BCELoss(reduction="sum")
-            else:
-                self.loss = nn.MSELoss(reduction="sum")
+
+        if classification and self.multiclass:
+            self.loss = nn.NLLLoss(reduction="sum")
+        elif classification:
+            self.loss = nn.BCELoss(reduction="sum")
+        else:
+            self.loss = nn.MSELoss(reduction="sum")
+
+    def _forward_logits(
+        self,
+        x: Tensor,
+        ensemble: bool = True,
+        post_train: bool = False,
+    ) -> Tensor:
+        """Compute logits before the final output transformation.
+
+        Args:
+            x: Input tensor.
+            ensemble: Whether to use ensemble-style inference.
+            post_train: Whether to use post-training thresholded inclusion.
+
+        Returns:
+            Output logits.
+        """
+        x_input = x.view(-1, self.p)
+
+        x_hidden = self.act(
+            self.linears[0](
+                x_input,
+                ensemble=ensemble,
+                post_train=post_train,
+            )
+        )
+
+        for layer in self.linears[1:-1]:
+            x_hidden = self.act(
+                layer(
+                    torch.cat((x_hidden, x_input), dim=1),
+                    ensemble=ensemble,
+                    post_train=post_train,
+                )
+            )
+
+        logits = self.linears[-1](
+            torch.cat((x_hidden, x_input), dim=1),
+            ensemble=ensemble,
+            post_train=post_train,
+        )
+
+        return logits
 
     def forward(
         self,
@@ -106,24 +146,13 @@ class BayesianNetworkFlow(nn.Module):
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
-            Network outputs as probabilities or raw values depending on task type.
+            Network outputs as probabilities or raw values depending on the task.
         """
-        x_input = x.view(-1, self.p)
-        x_hidden = self.act(
-            self.linears[0](x_input, ensemble=ensemble, post_train=post_train)
-        )
+        del sample
+        del calculate_log_probs
 
-        for layer in self.linears[1:-1]:
-            x_hidden = self.act(
-                layer(
-                    torch.cat((x_hidden, x_input), dim=1),
-                    ensemble=ensemble,
-                    post_train=post_train,
-                )
-            )
-
-        logits = self.linears[-1](
-            torch.cat((x_hidden, x_input), dim=1),
+        logits = self._forward_logits(
+            x=x,
             ensemble=ensemble,
             post_train=post_train,
         )
@@ -153,24 +182,13 @@ class BayesianNetworkFlow(nn.Module):
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
-            Output logits before final activation.
+            Output logits before the final activation.
         """
-        x_input = x.view(-1, self.p)
-        x_hidden = self.act(
-            self.linears[0](x_input, ensemble=ensemble, post_train=post_train)
-        )
+        del sample
+        del calculate_log_probs
 
-        for layer in self.linears[1:-1]:
-            x_hidden = self.act(
-                layer(
-                    torch.cat((x_hidden, x_input), dim=1),
-                    ensemble=ensemble,
-                    post_train=post_train,
-                )
-            )
-
-        return self.linears[-1](
-            torch.cat((x_hidden, x_input), dim=1),
+        return self._forward_logits(
+            x=x,
             ensemble=ensemble,
             post_train=post_train,
         )
@@ -178,8 +196,11 @@ class BayesianNetworkFlow(nn.Module):
     def kl(self) -> Tensor:
         """Return the total KL divergence across all layers.
 
+        Args:
+            None.
+
         Returns:
-            Summed KL divergence.
+            The summed KL divergence.
         """
         return sum(layer.kl_div() for layer in self.linears)
 
@@ -222,6 +243,6 @@ class BayesianNetworkFlow(nn.Module):
 
 
 class InputSkipFlowNetwork(BayesianNetworkFlow):
-    """Alias for the flow-based Bayesian network with input skip connections."""
+    """Alias for the flow-based network with input skip connections."""
 
     pass

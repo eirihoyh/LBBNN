@@ -34,8 +34,8 @@ class BayesianLinearFlow(nn.Module):
         in_features: int,
         out_features: int,
         num_transforms: int,
-        lower_init_lambda: float = 2.0,
-        upper_init_lambda: float = 10.0,
+        lower_init_lambda: float = -3.0,
+        upper_init_lambda: float = -0.0,
         a_prior: float = 0.1,
     ) -> None:
         """Initialize the flow-based Bayesian linear layer.
@@ -64,7 +64,7 @@ class BayesianLinearFlow(nn.Module):
         self.mu_prior = torch.zeros(out_features, in_features, device=DEVICE)
         self.sigma_prior = torch.full(
             (out_features, in_features),
-            20.0,
+            2.0,
             device=DEVICE,
         )
 
