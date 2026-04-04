@@ -55,15 +55,6 @@ class BayesianLinearLRT(nn.Module):
         self.weight_rho = nn.Parameter(
             -9.0 + 0.1 * torch.randn(out_features, in_features)
         )
-        self.weight_sigma = torch.empty(out_features, in_features, device=device)
-
-        # Prior parameters.
-        self.mu_prior = torch.zeros(out_features, in_features, device=device)
-        self.sigma_prior = torch.full(
-            (out_features, in_features),
-            std_prior,
-            device=device,
-        )
 
         # Inclusion probabilities.
         init_lambda = torch.empty(out_features, in_features).uniform_(
@@ -74,15 +65,14 @@ class BayesianLinearLRT(nn.Module):
             init_lambda[:, -p:] = 5.0
 
         self.lambdal = nn.Parameter(init_lambda)
-        self.alpha = torch.empty(out_features, in_features, device=device)
-        self.alpha_prior = torch.full(
-            (out_features, in_features),
-            a_prior,
-            device=device,
-        )
 
-        # KL divergence term updated during forward passes.
-        self.kl = torch.tensor(0.0, device=device)
+        # Prior parameters
+        self.register_buffer("mu_prior", torch.zeros(out_features, in_features))
+        self.register_buffer("sigma_prior", torch.full((out_features, in_features), std_prior))
+        self.register_buffer("alpha_prior", torch.full((out_features, in_features), a_prior))
+
+        # KL divergence term updated during forward passes
+        self.register_buffer("kl", torch.tensor(0.0))
 
     def forward(
         self,
@@ -106,20 +96,20 @@ class BayesianLinearLRT(nn.Module):
         """
         eps_num = torch.tensor(1e-45, device=input.device, dtype=input.dtype)
 
-        self.alpha = torch.sigmoid(self.lambdal)
+        alpha = torch.sigmoid(self.lambdal)
         alpha_prior = self.alpha_prior.clone()
 
         if post_train:
-            self.alpha = (self.alpha.detach() > 0.5).float()
-            alpha_prior[self.alpha.detach() < 0.5] = 0.0
+            alpha = (alpha.detach() > 0.5).float()
+            alpha_prior[alpha.detach() < 0.5] = 0.0
 
-        self.weight_sigma = torch.log1p(torch.exp(self.weight_rho))
+        weight_sigma = torch.log1p(torch.exp(self.weight_rho))
 
         if ensemble or self.training:
-            expected_weight = self.weight_mu * self.alpha
-            var_weight = self.alpha * (
-                self.weight_sigma**2
-                + (1.0 - self.alpha) * self.weight_mu**2
+            expected_weight = self.weight_mu * alpha
+            var_weight = alpha * (
+                weight_sigma**2
+                + (1.0 - alpha) * self.weight_mu**2
             )
 
             expected_bias = input @ expected_weight.T
@@ -131,35 +121,35 @@ class BayesianLinearLRT(nn.Module):
             ) * noise
         else:
             weights = (
-                torch.normal(self.weight_mu, self.weight_sigma)
+                torch.normal(self.weight_mu, weight_sigma)
                 if sample
                 else self.weight_mu
             )
-            gates = (self.alpha.detach() > 0.5).float()
+            gates = (alpha.detach() > 0.5).float()
             activations = input @ (weights * gates).T
 
             if calculate_log_probs:
-                self.alpha = gates
+                alpha = gates
 
         if self.training or calculate_log_probs:
             kl_weight = (
-                self.alpha
+                alpha
                 * (
                     torch.log(
-                        (self.sigma_prior / (self.weight_sigma + eps_num))
+                        (self.sigma_prior / (weight_sigma + eps_num))
                         + eps_num
                     )
                     - 0.5
-                    + torch.log((self.alpha / (alpha_prior + eps_num)) + eps_num)
+                    + torch.log((alpha / (alpha_prior + eps_num)) + eps_num)
                     + (
-                        self.weight_sigma**2
+                        weight_sigma**2
                         + (self.weight_mu - self.mu_prior) ** 2
                     )
                     / (2.0 * self.sigma_prior**2 + eps_num)
                 )
-                + (1.0 - self.alpha)
+                + (1.0 - alpha)
                 * torch.log(
-                    ((1.0 - self.alpha) / (1.0 - alpha_prior + eps_num))
+                    ((1.0 - alpha) / (1.0 - alpha_prior + eps_num))
                     + eps_num
                 )
             ).sum()
