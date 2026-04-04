@@ -8,7 +8,6 @@ from torch import Tensor
 
 from .transforms import PropagateFlow
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 Z_FLOW_TYPE = "IAF"
 R_FLOW_TYPE = "IAF"
 
@@ -53,6 +52,7 @@ class BayesianLinearFlow(nn.Module):
         """
         super().__init__()
 
+        # mean, std and incusion prob paramters
         self.weight_mu = nn.Parameter(
             torch.empty(out_features, in_features).uniform_(-0.01, 0.01)
         )
@@ -61,26 +61,25 @@ class BayesianLinearFlow(nn.Module):
         )
         self.weight_sigma = torch.empty_like(self.weight_rho)
 
-        self.mu_prior = torch.zeros(out_features, in_features, device=DEVICE)
-        self.sigma_prior = torch.full(
-            (out_features, in_features),
-            2.0,
-            device=DEVICE,
-        )
-
         self.lambdal = nn.Parameter(
             torch.empty(out_features, in_features).uniform_(
                 lower_init_lambda,
                 upper_init_lambda,
             )
         )
-        self.alpha = torch.empty_like(self.lambdal)
-        self.alpha_prior = torch.full(
-            (out_features, in_features),
-            a_prior,
-            device=DEVICE,
+
+        # Prior parameters
+        self.register_buffer("mu_prior", torch.zeros(out_features, in_features))
+        self.register_buffer(
+            "sigma_prior",
+            torch.full((out_features, in_features), 2.0),
+        )
+        self.register_buffer(
+            "alpha_prior",
+            torch.full((out_features, in_features), a_prior),
         )
 
+        # normalizing flow specific paramters
         self.q0_mean = nn.Parameter(torch.randn(in_features))
         self.q0_log_var = nn.Parameter(-9.0 + torch.randn(in_features))
         self.c1 = nn.Parameter(torch.randn(in_features))
@@ -120,19 +119,21 @@ class BayesianLinearFlow(nn.Module):
         Returns:
             The KL divergence for the layer.
         """
+
+        zk, log_det_q = self.sample_z()
+
         if self.z is None:
             raise RuntimeError("Latent variable z must be sampled before KL.")
 
-        self.alpha = torch.sigmoid(self.lambdal)
-        self.weight_sigma = torch.log1p(torch.exp(self.weight_rho))
+        alpha = torch.sigmoid(self.lambdal)
+        weight_sigma = torch.log1p(torch.exp(self.weight_rho))
 
-        zk, log_det_q = self.sample_z()
         eps = torch.tensor(1e-45, device=zk.device, dtype=zk.dtype)
 
-        weight_mean = zk * self.weight_mu * self.alpha
-        weight_var = self.alpha * (
-            self.weight_sigma**2
-            + (1.0 - self.alpha) * self.weight_mu**2 * zk**2
+        weight_mean = zk * self.weight_mu * alpha
+        weight_var = alpha * (
+            weight_sigma**2
+            + (1.0 - alpha) * self.weight_mu**2 * zk**2
         ) + eps
 
         log_q0 = (
@@ -161,20 +162,20 @@ class BayesianLinearFlow(nn.Module):
         log_r = log_det_r + log_rb
 
         kl_weight = (
-            self.alpha
+            alpha
             * (
-                torch.log((self.sigma_prior / (self.weight_sigma + eps)) + eps)
+                torch.log((self.sigma_prior / (weight_sigma + eps)) + eps)
                 - 0.5
-                + torch.log((self.alpha / (self.alpha_prior + eps)) + eps)
+                + torch.log((alpha / (self.alpha_prior + eps)) + eps)
                 + (
-                    self.weight_sigma**2
+                    weight_sigma**2
                     + (self.weight_mu * zk - self.mu_prior) ** 2
                 )
                 / (2.0 * self.sigma_prior**2 + eps)
             )
-            + (1.0 - self.alpha)
+            + (1.0 - alpha)
             * torch.log(
-                ((1.0 - self.alpha) / (1.0 - self.alpha_prior + eps)) + eps
+                ((1.0 - alpha) / (1.0 - self.alpha_prior + eps)) + eps
             )
         ).sum()
 
@@ -196,19 +197,19 @@ class BayesianLinearFlow(nn.Module):
         Returns:
             Output activations of shape ``(batch_size, out_features)``.
         """
-        self.alpha = torch.sigmoid(self.lambdal)
+        alpha = torch.sigmoid(self.lambdal)
 
         if post_train:
-            self.alpha = (self.alpha.detach() > 0.5).float()
+            alpha = (alpha.detach() > 0.5).float()
 
-        self.weight_sigma = torch.log1p(torch.exp(self.weight_rho))
+        weight_sigma = torch.log1p(torch.exp(self.weight_rho))
         zk, _ = self.sample_z()
 
         if self.training or ensemble:
-            expected_weight = self.weight_mu * self.alpha * zk
-            var_weight = self.alpha * (
-                self.weight_sigma**2
-                + (1.0 - self.alpha) * self.weight_mu**2 * zk**2
+            expected_weight = self.weight_mu * alpha * zk
+            var_weight = alpha * (
+                weight_sigma**2
+                + (1.0 - alpha) * self.weight_mu**2 * zk**2
             )
 
             expected_bias = input @ expected_weight.T
@@ -219,8 +220,8 @@ class BayesianLinearFlow(nn.Module):
                 torch.clamp(var_bias, min=0.0)
             ) * noise
         else:
-            weights = torch.normal(self.weight_mu * zk, self.weight_sigma)
-            gates = (self.alpha.detach() > 0.5).float()
+            weights = torch.normal(self.weight_mu * zk, weight_sigma)
+            gates = (alpha.detach() > 0.5).float()
             activations = input @ (weights * gates).T
 
         return activations
