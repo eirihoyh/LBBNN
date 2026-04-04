@@ -8,7 +8,6 @@ import torch
 
 from LBBNN import (
     InputSkipLRTNetwork,
-    create_data_unif,
     get_data,
     train_epoch,
     validate,
@@ -34,7 +33,7 @@ TEST_FRAC = 0.15
 DIM = 16
 HIDDEN_LAYERS = 2
 LR = 5e-2
-EPOCHS = 30
+EPOCHS = 10
 BATCH_SIZE = 64
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -139,11 +138,7 @@ def main():
     # --------------------------------------------------------
     # 1. Data
     # --------------------------------------------------------
-    # y_np, X_np = create_data_unif(
-    #     n=N_SAMPLES,
-    #     classification=True,
-    #     seed=SEED,
-    # )
+
     _, y_np, X_np = get_data(n=N_SAMPLES, classification=True)
 
     X = torch.tensor(X_np, dtype=torch.float32)
@@ -163,8 +158,8 @@ def main():
     # --------------------------------------------------------
     # 2. Model
     # NOTE:
-    # We use ReLU so that gradient/piecewise-linear explanations
-    # are easier to interpret with the helper functions.
+    # We use ReLU so that gradient/piecewise-linear 
+    # gives exact linear explanations
     # --------------------------------------------------------
     model = InputSkipLRTNetwork(
         dim=DIM,
@@ -209,6 +204,7 @@ def main():
         history.append(
             {
                 "epoch": epoch,
+                "kl_model": float(model.kl()),
                 "train_nll": float(train_nll),
                 "train_loss": float(train_loss),
                 "val_nll": float(val_nll),
@@ -219,8 +215,9 @@ def main():
 
         print(
             f"[LRT] Epoch {epoch:03d} | "
-            f"train_loss={train_loss:.4f} | "
-            f"val_loss={val_loss:.4f} | "
+            f"kl_model={model.kl():.4f} | "
+            f"train_nll={train_loss:.4f} | "
+            f"val_nll={val_nll:.4f} | "
             f"val_acc={val_metric:.4f}"
         )
 
@@ -305,7 +302,8 @@ def main():
     # --------------------------------------------------------
     # 7. Local explanation for one test sample
     # --------------------------------------------------------
-    x_explain = X_test[0].detach().cpu()
+
+    x_explain = X_test[0].detach()
 
     expl_values, preds, p_expl = local_explain_piecewise_linear_act(
         net=model,
@@ -323,7 +321,7 @@ def main():
         explanation=expl_values,
         preds=preds.detach().cpu().numpy(),
         p=np.array([p_expl]),
-        x=x_explain.numpy(),
+        x=x_explain.detach().cpu().numpy(),
     )
 
     plotting.plot_local_explain_piecewise_linear_act(

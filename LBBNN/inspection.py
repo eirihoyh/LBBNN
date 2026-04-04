@@ -46,7 +46,7 @@ def weight_matrices_numpy(net: Any, flow: bool = False) -> list[np.ndarray]:
 
     if flow:
         z_values = z_matrices_numpy(net)
-        for idx in range(min(len(weights), len(z_values))):
+        for idx in range(len(z_values)):
             weights[idx] *= z_values[idx]
 
     return weights
