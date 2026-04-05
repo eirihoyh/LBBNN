@@ -369,7 +369,9 @@ This project is distributed under the **MIT License**.
 
 If you use this repository in academic research, please cite the relevant methodological paper as well as the software repository or archived software release.
 
-The LBBNN Python package is developed based on a handful of papers:
+The LBBNN Python package is developed based on a handful of papers.
+
+[Sparse Bayesian Neural Networks: Bridging Model and Parameter Uncertainty through Scalable Variational Inference](https://www.mdpi.com/2227-7390/12/6/788):
 
 ```bibtex
 @article{hubin2024sparse,
@@ -384,6 +386,9 @@ The LBBNN Python package is developed based on a handful of papers:
 }
 ```
 
+[Sparsifying Bayesian neural networks with latent binary vari
+ables and normalizing flows](https://openreview.net/pdf?id=d6kqUKzG3V):
+
 ```bibtex
 @article{skaaret-lund2024sparsifying,
   title={Sparsifying Bayesian neural networks with latent binary variables and normalizing flows},
@@ -393,6 +398,9 @@ The LBBNN Python package is developed based on a handful of papers:
   year={2024},
 }
 ```
+
+[Explainable Bayesian deep learning through input-skip
+Latent Binary Bayesian Neural Networks](https://arxiv.org/pdf/2503.10496) (preprint):
 
 ```bibtex
 @article{hoyheim2025explainable,
