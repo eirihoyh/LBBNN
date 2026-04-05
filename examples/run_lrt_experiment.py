@@ -15,6 +15,8 @@ from LBBNN import (
     get_active_weights,
     plotting,
     local_explain_piecewise_linear_act,
+    weight_matrices,
+    what_if_explanations,
 )
 
 
@@ -30,11 +32,11 @@ TRAIN_FRAC = 0.70
 VAL_FRAC = 0.15
 TEST_FRAC = 0.15
 
-DIM = 16
-HIDDEN_LAYERS = 2
-LR = 5e-2
-EPOCHS = 10
-BATCH_SIZE = 64
+DIM = 20
+HIDDEN_LAYERS = 4
+LR = 1e-1
+EPOCHS = 100
+BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -139,7 +141,11 @@ def main():
     # 1. Data
     # --------------------------------------------------------
 
-    _, y_np, X_np = get_data(n=N_SAMPLES, classification=True)
+    _, y_np, X_np = get_data(
+        n=N_SAMPLES, 
+        classification=True,
+        non_lin=True
+        )
 
     X = torch.tensor(X_np, dtype=torch.float32)
     y = torch.tensor(y_np, dtype=torch.float32)
@@ -176,7 +182,7 @@ def main():
     # 3. Training loop
     # --------------------------------------------------------
     history = []
-    nr_weights = sum(param.numel() for param in model.parameters())
+    nr_weights = sum(param.numel() for param in weight_matrices(net=model))
 
     for epoch in range(1, EPOCHS + 1):
         train_nll, train_loss = train_epoch(
@@ -300,7 +306,8 @@ def main():
         print(f"[LRT] Path graph was skipped ({exc}).")
 
     # --------------------------------------------------------
-    # 7. Local explanation for one test sample
+    # 7. Local explanation for one test sample and 
+    # what-if local explanation when adjusting one covariate
     # --------------------------------------------------------
 
     x_explain = X_test[0].detach()
@@ -340,6 +347,48 @@ def main():
         no_zero_contributions=False,
         save_path=str(RESULTS_DIR / "local_explanation_plot"),
         show=False,
+    )
+
+    feature_names = ['Bias', 'x_1', 'x_2']
+    
+    minimum, maximum = X_test.detach().cpu().numpy().min(), X_test.detach().cpu().numpy().max()
+
+    observed_space, contributions_feature_1, predictions_feature_1 = what_if_explanations(
+        model, 
+        x_explain.detach(), 
+        minimum=minimum,
+        maximum=maximum,
+        feature_index=1,
+        n_samples=50,
+        n_expl_per_sample=100)
+    
+    plotting.plot_what_if_explanations(
+        observed_space,
+        contributions_feature_1,
+        predictions_feature_1,
+        x_explain.detach().cpu().numpy(),
+        feature_names=feature_names,
+        feature_in_focus=1,
+        save_path=str(RESULTS_DIR / "what-if_explanation_feature_1")
+    )
+
+    observed_space, contributions_feature_2, predictions_feature_2 = what_if_explanations(
+        model, 
+        x_explain.detach(), 
+        minimum=minimum,
+        maximum=maximum,
+        feature_index=2,
+        n_samples=50,
+        n_expl_per_sample=100)
+    
+    plotting.plot_what_if_explanations(
+        observed_space,
+        contributions_feature_2,
+        predictions_feature_2,
+        x_explain.detach().cpu().numpy(),
+        feature_names=feature_names,
+        feature_in_focus=2,
+        save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
     )
 
     print(f"[LRT] Saved all results to: {RESULTS_DIR.resolve()}")

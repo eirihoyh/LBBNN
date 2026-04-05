@@ -8,12 +8,15 @@ import torch
 
 from LBBNN import (
     InputSkipFlowNetwork,
-    create_data_unif,
     get_data,
+    train_epoch,
+    validate,
     clean_alpha,
     get_active_weights,
     plotting,
     local_explain_piecewise_linear_act,
+    weight_matrices,
+    what_if_explanations,
 )
 
 
@@ -29,14 +32,15 @@ TRAIN_FRAC = 0.70
 VAL_FRAC = 0.15
 TEST_FRAC = 0.15
 
-DIM = 16
+DIM = 20
 HIDDEN_LAYERS = 2
 NUM_TRANSFORMS = 2
-LR = 5e-3
-EPOCHS = 30
-BATCH_SIZE = 32
+LR = 1e-1
+EPOCHS = 100
+BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# DEVICE = torch.device("cpu")
 
 
 # ============================================================
@@ -128,56 +132,6 @@ def split_dataset(X: torch.Tensor, y: torch.Tensor):
 
 
 # ============================================================
-# FLOW-specific train/validate helpers
-# ============================================================
-def train_epoch_flow(model, train_data, optimizer, batch_size, num_batches, p, device):
-    model.train()
-
-    idx = np.random.permutation(len(train_data))
-    train_data = train_data[idx]
-
-    last_nll = None
-    last_loss = None
-    old_batch = 0
-
-    for batch in range(int(np.ceil(train_data.shape[0] / batch_size))):
-        batch = batch + 1
-        x_batch = train_data[old_batch: batch_size * batch, 0:p]
-        y_batch = train_data[old_batch: batch_size * batch, -1]
-        old_batch = batch_size * batch
-
-        data = x_batch.to(device)
-        target = y_batch.to(device).float().unsqueeze(1)
-
-        optimizer.zero_grad()
-        outputs = model(data, ensemble=True)
-        nll = model.loss(outputs, target)
-        kl_part = model.kl() / max(num_batches, 1)
-        loss = nll + kl_part
-        loss.backward()
-        optimizer.step()
-
-        last_nll = float(nll.detach().cpu())
-        last_loss = float(loss.detach().cpu())
-
-    return last_nll, last_loss
-
-
-def validate_flow(model, val_data, device):
-    model.eval()
-    with torch.no_grad():
-        x_val = val_data[:, :-1].to(device)
-        y_val = val_data[:, -1].to(device).float().unsqueeze(1)
-
-        outputs = model(x_val, ensemble=False)
-        nll = model.loss(outputs, y_val)
-        loss = nll + model.kl()
-        acc = float(((outputs >= THRESHOLD).float() == y_val).float().mean().cpu())
-
-    return float(nll.detach().cpu()), float(loss.detach().cpu()), acc
-
-
-# ============================================================
 # Main
 # ============================================================
 def main():
@@ -186,13 +140,11 @@ def main():
     # --------------------------------------------------------
     # 1. Data
     # --------------------------------------------------------
-    # y_np, X_np = create_data_unif(
-    #     n=N_SAMPLES,
-    #     classification=True,
-    #     seed=SEED,
-    # )
-    _, y_np, X_np = get_data(n=N_SAMPLES, classification=True)
-
+    _, y_np, X_np = get_data(
+        n=N_SAMPLES, 
+        classification=True,
+        non_lin=True
+        )
     X = torch.tensor(X_np, dtype=torch.float32)
     y = torch.tensor(y_np, dtype=torch.float32)
 
@@ -226,27 +178,35 @@ def main():
     # 3. Training loop
     # --------------------------------------------------------
     history = []
+    nr_weights = sum(param.numel() for param in weight_matrices(net=model))
 
     for epoch in range(1, EPOCHS + 1):
-        train_nll, train_loss = train_epoch_flow(
-            model=model,
+        train_nll, train_loss = train_epoch(
+            net=model,
             train_data=train_data,
             optimizer=optimizer,
             batch_size=BATCH_SIZE,
             num_batches=num_batches,
             p=p,
             device=DEVICE,
+            nr_weights=nr_weights,
+            multiclass=False,
+            verbose=False,
         )
 
-        val_nll, val_loss, val_metric = validate_flow(
-            model=model,
+        val_nll, val_loss, val_metric = validate(
+            net=model,
             val_data=val_data,
             device=DEVICE,
+            multiclass=False,
+            reg=False,
+            verbose=False,
         )
 
         history.append(
             {
                 "epoch": epoch,
+                "kl_model": float(model.kl()),
                 "train_nll": float(train_nll),
                 "train_loss": float(train_loss),
                 "val_nll": float(val_nll),
@@ -257,8 +217,9 @@ def main():
 
         print(
             f"[FLOW] Epoch {epoch:03d} | "
-            f"train_loss={train_loss:.4f} | "
-            f"val_loss={val_loss:.4f} | "
+            f"kl_model={model.kl():.4f} | "
+            f"train_nll={train_loss:.4f} | "
+            f"val_nll={val_nll:.4f} | "
             f"val_acc={val_metric:.4f}"
         )
 
@@ -343,11 +304,10 @@ def main():
         print(f"[FLOW] Path graph was skipped ({exc}).")
 
     # --------------------------------------------------------
-    # 7. Local explanation for one test sample
+    # 7. Local explanation for one test sample and 
+    # what-if local explanation when adjusting one covariate
     # --------------------------------------------------------
-    device = torch.device("cpu")
-    model.to(device)
-    x_explain = X_test[0].detach().cpu()
+    x_explain = X_test[0].detach()
 
     expl_values, preds, p_expl = local_explain_piecewise_linear_act(
         net=model,
@@ -365,7 +325,7 @@ def main():
         explanation=expl_values,
         preds=preds.detach().cpu().numpy(),
         p=np.array([p_expl]),
-        x=x_explain.numpy(),
+        x=x_explain.detach().cpu().numpy(),
     )
 
     plotting.plot_local_explain_piecewise_linear_act(
@@ -384,6 +344,48 @@ def main():
         no_zero_contributions=False,
         save_path=str(RESULTS_DIR / "local_explanation_plot"),
         show=False,
+    )
+
+    feature_names = ['Bias', 'x_1', 'x_2']
+    
+    minimum, maximum = X_test.detach().cpu().numpy().min(), X_test.detach().cpu().numpy().max()
+
+    observed_space, contributions_feature_1, predictions_feature_1 = what_if_explanations(
+        model, 
+        x_explain.detach(), 
+        minimum=minimum,
+        maximum=maximum,
+        feature_index=1,
+        n_samples=50,
+        n_expl_per_sample=100)
+    
+    plotting.plot_what_if_explanations(
+        observed_space,
+        contributions_feature_1,
+        predictions_feature_1,
+        x_explain.detach().cpu().numpy(),
+        feature_names=feature_names,
+        feature_in_focus=1,
+        save_path=str(RESULTS_DIR / "what-if_explanation_feature_1")
+    )
+
+    observed_space, contributions_feature_2, predictions_feature_2 = what_if_explanations(
+        model, 
+        x_explain.detach(), 
+        minimum=minimum,
+        maximum=maximum,
+        feature_index=2,
+        n_samples=50,
+        n_expl_per_sample=100)
+    
+    plotting.plot_what_if_explanations(
+        observed_space,
+        contributions_feature_2,
+        predictions_feature_2,
+        x_explain.detach().cpu().numpy(),
+        feature_names=feature_names,
+        feature_in_focus=2,
+        save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
     )
 
     print(f"[FLOW] Saved all results to: {RESULTS_DIR.resolve()}")
