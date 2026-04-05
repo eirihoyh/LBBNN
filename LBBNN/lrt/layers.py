@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+import math
+
 
 def get_default_device() -> torch.device:
     """Return the default device used for model tensors.
@@ -21,8 +23,8 @@ class BayesianLinearLRT(nn.Module):
         self,
         in_features: int,
         out_features: int,
-        lower_init_lambda: float = -10.0,
-        upper_init_lambda: float = -7.0,
+        lower_init_alpha: float = 0.30,
+        upper_init_alpha: float = 0.49,
         a_prior: float = 0.1,
         std_prior: float = 2.5,
         p: int | None = None,
@@ -32,10 +34,10 @@ class BayesianLinearLRT(nn.Module):
         Args:
             in_features: Number of input features.
             out_features: Number of output features.
-            lower_init_lambda: Lower bound for uniform initialization of
-                inclusion logits.
-            upper_init_lambda: Upper bound for uniform initialization of
-                inclusion logits.
+            lower_init_alpha: Lower bound for uniform initialization of
+                inclusion probability.
+            upper_init_alpha: Upper bound for uniform initialization of
+                inclusion probability.
             a_prior: Prior inclusion probability.
             std_prior: Prior standard deviation for the weights.
             p: Number of skip-input features forced to start with high
@@ -45,7 +47,10 @@ class BayesianLinearLRT(nn.Module):
             None.
         """
         super().__init__()
-
+        
+        lower_init_lambda = math.log(lower_init_alpha / (1-lower_init_alpha))
+        upper_init_lambda = math.log(upper_init_alpha / (1-upper_init_alpha))
+        
         device = get_default_device()
 
         # Variational parameters for the weights.

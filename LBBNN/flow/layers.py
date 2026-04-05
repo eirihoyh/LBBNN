@@ -33,8 +33,8 @@ class BayesianLinearFlow(nn.Module):
         in_features: int,
         out_features: int,
         num_transforms: int,
-        lower_init_lambda: float = -3.0,
-        upper_init_lambda: float = -0.0,
+        lower_init_alpha: float = 0.30,
+        upper_init_alpha: float = 0.49,
         a_prior: float = 0.1,
     ) -> None:
         """Initialize the flow-based Bayesian linear layer.
@@ -43,14 +43,17 @@ class BayesianLinearFlow(nn.Module):
             in_features: Number of input features.
             out_features: Number of output features.
             num_transforms: Number of transforms in each flow.
-            lower_init_lambda: Lower bound for inclusion logit initialization.
-            upper_init_lambda: Upper bound for inclusion logit initialization.
+            lower_init_alpha: Lower bound for inclusion probability initialization.
+            upper_init_alpha: Upper bound for inclusion probability initialization.
             a_prior: Prior inclusion probability.
 
         Returns:
             None.
         """
         super().__init__()
+
+        lower_init_lambda = math.log(lower_init_alpha/ (1-lower_init_alpha))
+        upper_init_lambda = math.log(upper_init_alpha/ (1-upper_init_alpha))
 
         # mean, std and incusion prob paramters
         self.weight_mu = nn.Parameter(

@@ -23,6 +23,8 @@ class BayesianNetworkFlow(nn.Module):
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
+        lower_init_alpha: float = 0.30,
+        upper_init_alpha: float = 0.49,
     ) -> None:
         """Initialize the flow-based Bayesian network.
 
@@ -35,6 +37,8 @@ class BayesianNetworkFlow(nn.Module):
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in hidden layers.
+            lower_init_alpha: Lower bound for inclusion probability initialization.
+            upper_init_alpha: Upper bound for inclusion probability initialization.
 
         Returns:
             None.
@@ -53,6 +57,8 @@ class BayesianNetworkFlow(nn.Module):
                     dim,
                     a_prior=a_prior,
                     num_transforms=num_transforms,
+                    lower_init_alpha=lower_init_alpha,
+                    upper_init_alpha=upper_init_alpha,
                 )
             ]
         )
@@ -64,6 +70,8 @@ class BayesianNetworkFlow(nn.Module):
                     dim,
                     a_prior=a_prior,
                     num_transforms=num_transforms,
+                    lower_init_alpha=lower_init_alpha,
+                    upper_init_alpha=upper_init_alpha,
                 )
                 for _ in range(hidden_layers - 1)
             ]
@@ -75,6 +83,8 @@ class BayesianNetworkFlow(nn.Module):
                 n_classes,
                 a_prior=a_prior,
                 num_transforms=num_transforms,
+                lower_init_alpha=lower_init_alpha,
+                upper_init_alpha=upper_init_alpha,
             )
         )
 

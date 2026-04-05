@@ -23,8 +23,8 @@ class BayesianNetworkLRT(nn.Module):
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
-        lower_init_lambda: float = -10.0,
-        upper_init_lambda: float = -7.0,
+        lower_init_alpha: float = 0.30,
+        upper_init_alpha: float = 0.49,
         high_init_covariate_prob: bool = False,
         custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
@@ -42,8 +42,8 @@ class BayesianNetworkLRT(nn.Module):
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in the hidden layers.
-            lower_init_lambda: Lower bound for inclusion logit initialization.
-            upper_init_lambda: Upper bound for inclusion logit initialization.
+            lower_init_alpha: Lower bound for inclusion probability initialization.
+            upper_init_alpha: Upper bound for inclusion probability initialization.
             high_init_covariate_prob: Whether to initialize skip covariates with
                 high inclusion probability.
 
@@ -66,8 +66,8 @@ class BayesianNetworkLRT(nn.Module):
                     dim,
                     a_prior=a_prior,
                     std_prior=std_prior,
-                    lower_init_lambda=lower_init_lambda,
-                    upper_init_lambda=upper_init_lambda,
+                    lower_init_alpha=lower_init_alpha,
+                    upper_init_alpha=upper_init_alpha,
                     p=nr_var,
                 )
             ]
@@ -80,8 +80,8 @@ class BayesianNetworkLRT(nn.Module):
                     dim,
                     a_prior=a_prior,
                     std_prior=std_prior,
-                    lower_init_lambda=lower_init_lambda,
-                    upper_init_lambda=upper_init_lambda,
+                    lower_init_alpha=lower_init_alpha,
+                    upper_init_alpha=upper_init_alpha,
                     p=nr_var,
                 )
                 for _ in range(hidden_layers - 1)
@@ -94,8 +94,8 @@ class BayesianNetworkLRT(nn.Module):
                 n_classes,
                 a_prior=a_prior,
                 std_prior=std_prior,
-                lower_init_lambda=lower_init_lambda,
-                upper_init_lambda=upper_init_lambda,
+                lower_init_alpha=lower_init_alpha,
+                upper_init_alpha=upper_init_alpha,
                 p=nr_var,
             )
         )
