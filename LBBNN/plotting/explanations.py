@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import copy
 from typing import Any, Sequence
+from pathlib import Path
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
 from torch import Tensor
+import itertools
 
 from ._common import ensure_parent, get_matplotlib
 from .. import explain as expl
@@ -315,3 +317,110 @@ def plot_local_explain_piecewise_linear_act(
         plt.close(fig)
 
     return saved_paths
+
+
+def plot_what_if_explanations(
+    observed_space: NDArray[np.float64],
+    contributions: NDArray[np.float64],
+    predictions: NDArray[np.float64],
+    data: Tensor,
+    feature_names: Sequence[str] | None = None,
+    class_names: Sequence[str] | None = None,
+    feature_in_focus: int | None = None,
+    save_path: str | None = None,
+) -> None:
+    """Plot feature contributions over a what-if intervention range.
+
+    Args:
+        observed_space: Evaluated values for the varied feature.
+        contributions: Contribution values with shape
+            ``(n_samples, n_features, n_expl_per_sample)``.
+        predictions: Predicted class indicators with shape
+            ``(n_samples, n_prediction_samples)``.
+        data: Original one-dimensional input tensor.
+        feature_names: Optional names of the input features.
+        class_names: Optional names of the output classes.
+        feature_in_focus: Index of the adjusted feature.
+        save_path: Optional path prefix for saving the plot.
+
+    Returns:
+        None.
+    """
+    plt, _, _ = get_matplotlib()
+
+    n_features = contributions.shape[1]
+    n_classes = predictions.shape[1]
+
+    if feature_names is None:
+        feature_names = [f"x_{i}" for i in range(n_features)]
+
+    if class_names is None:
+        class_names = [f"Class {i}" for i in range(n_classes)]
+
+    if feature_in_focus is None:
+        feature_in_focus = 0
+
+    original_value = "Original input: " + ", ".join(
+        f"{feature_names[i]}={data[i].item():.2f}"
+        for i in range(len(feature_names))
+    )
+
+    plt.style.use("seaborn-v0_8-colorblind")
+    plt.rc("font", size=14)
+    plt.rc("axes", labelsize=14)
+    plt.rc("xtick", labelsize=14)
+
+    linestyles = ["-", "--", ":", "-."]
+    style_cycler = itertools.cycle(linestyles)
+
+    plt.figure(figsize=(13.5, 5))
+
+    for feature_idx in range(n_features):
+        lower, median, upper = np.quantile(
+            contributions[:, feature_idx, :],
+            [0.025, 0.5, 0.975],
+            axis=1,
+        )
+
+        plt.plot(
+            observed_space,
+            median,
+            linestyle=next(style_cycler),
+            label=feature_names[feature_idx],
+            linewidth=2.5,
+        )
+        plt.fill_between(observed_space, lower, upper, alpha=0.2)
+
+    pred_changes = np.where(predictions.mean(axis=1) > 0.5)[0]
+    if pred_changes.size > 0:
+        for pred_change in pred_changes[:-1]:
+            plt.axvline(
+                x=observed_space[pred_change],
+                color="red",
+                linestyle="-",
+                alpha=0.125,
+                linewidth=2.5,
+            )
+        plt.axvline(
+            x=observed_space[pred_changes[-1]],
+            color="red",
+            linestyle="-",
+            alpha=0.125,
+            linewidth=2.5,
+            label="Prediction=1",
+        )
+
+    plt.xlabel(f"New {feature_names[feature_in_focus]} Value")
+    plt.ylabel("Contribution (∇f(x))")
+    plt.title(
+        "Covariate contributions. "
+        f"{feature_names[feature_in_focus]} is adjusted. "
+        f"{original_value}"
+    )
+    plt.legend()
+
+    if save_path is not None:
+        output_path = Path(f"{save_path}.png")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path, bbox_inches="tight")
+    plt.show()

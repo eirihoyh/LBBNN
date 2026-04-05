@@ -415,3 +415,55 @@ def local_explain_piecewise_linear_act(
         expl = input_array[None, :, None] * expl
 
     return expl, preds.detach().cpu(), p
+
+
+def what_if_explanations(
+    net: Any,
+    data: Tensor,
+    feature_index: int,
+    minimum: float,
+    maximum: float,
+    n_samples: int = 1000,
+    n_expl_per_sample: int = 10,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Compute local explanations over a range of values for one feature.
+
+    Args:
+        net: Trained network object.
+        data: One-dimensional input tensor to explain.
+        feature_index: Index of the feature to vary.
+        minimum: Lower bound for the feature value.
+        maximum: Upper bound for the feature value.
+        n_samples: Number of feature values to evaluate.
+        n_expl_per_sample: Number of explanation samples per feature value.
+
+    Returns:
+        A tuple containing:
+            - The evaluated feature values.
+            - The local contributions for each feature value.
+            - The predicted class indicator for each feature value.
+    """
+    observed_space = np.linspace(minimum, maximum, num=n_samples)
+    contributions = np.zeros(
+        (n_samples, data.shape[0], n_expl_per_sample),
+        dtype=float,
+    )
+    predictions = np.zeros((n_samples, n_expl_per_sample), dtype=float)
+
+    for i, adjusted_value in enumerate(observed_space):
+        data_adjusted = data.clone()
+        data_adjusted[feature_index] = torch.tensor(adjusted_value, device=data.device)
+
+        explanation, preds, _ = local_explain_piecewise_linear_act(
+            net,
+            data_adjusted,
+            n_samples=n_expl_per_sample,
+        )
+
+        contributions[i] = explanation[:, :, 0].T
+        prediction_value = float(
+            preds[:, 0].detach().cpu().numpy().mean() > 0.5
+        )
+        predictions[i, :] = prediction_value
+
+    return observed_space, contributions, predictions
