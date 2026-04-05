@@ -9,9 +9,10 @@ from numpy.typing import NDArray
 
 def get_data(
     n: int = 10_000,
-    beta: NDArray[np.float64] | Sequence[float] = np.array([1.0, 5.0]),
+    beta: NDArray[np.float64] | Sequence[float] = np.array([-1.0, 1.5, -1.5, 1.0, 1.0, 1.0]),
     classification: bool = True,
     non_lin: bool = False,
+    squared_terms: bool =False,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Generate a simple one-dimensional synthetic dataset.
 
@@ -30,13 +31,16 @@ def get_data(
     beta_array = np.asarray(beta, dtype=float)
 
     np.random.seed(42)
-    x = np.random.randn(n, 1)
+    x = np.random.randn(n, 2)
     x_with_intercept = np.hstack([np.ones((x.shape[0], 1)), x])
 
+    y = beta[0] + beta[1]*x_with_intercept[:,1] + beta[2]*x_with_intercept[:,2]
+    
     if non_lin:
-        y = beta_array[0] + beta_array[1] * (x**2).flatten()
-    else:
-        y = beta_array[0] + beta_array[1] * x.flatten()
+        y += beta[3]*x_with_intercept[:,1]*x_with_intercept[:,2]
+
+    if squared_terms:
+        y += beta[4]*(x_with_intercept[:,1]**2) + beta[5]*(x_with_intercept[:,2]**2)
 
     if classification:
         probabilities = 1.0 / (1.0 + np.exp(-y))
