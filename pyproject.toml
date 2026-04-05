@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "LBBNN"
+version = "0.1.0"
+description = "Package for implementing LBBNNs with input skip-connections"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Eirik Høyheim", email = "eirik.hoyheim@ffi.no" }]
+dependencies = [
+    "numpy>=1.24", 
+    "torch==2.6.0",
+    "matplotlib>=3.8"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+plot = ["graphviz>=0.20"]
+
+[project.urls]
+Homepage = "https://github.com/eirihoyh/LBBNN"
+Issues = "https://github.com/eirihoyh/LBBNN/issues"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["LBBNN*"]
+exclude = ["tests*", "examples*"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
