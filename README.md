@@ -253,7 +253,7 @@ LBBNN/
         ├── inspection.py
         ├── explain.py
         ├── training.py
-        ├── LRT/
+        ├── lrt/
         │   ├── __init__.py
         │   ├── layers.py
         │   ├── network.py

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 import torch
 from torch import Tensor
 from torch.optim import Optimizer
 
+from ._types import BayesianNet
 from .inspection import (
     clean_alpha,
     expected_number_of_weights,
@@ -53,7 +52,7 @@ def _rmse(y_pred: Tensor, y_true: Tensor) -> float:
 
 
 def train_epoch(
-    net: Any,
+    net: BayesianNet,
     train_data: Tensor,
     optimizer: Optimizer,
     batch_size: int,
@@ -127,7 +126,7 @@ def train_epoch(
 
 
 def validate(
-    net: Any,
+    net: BayesianNet,
     val_data: Tensor,
     device: torch.device,
     multiclass: bool = False,
@@ -195,7 +194,7 @@ def validate(
 
 
 def test_ensemble(
-    net: Any,
+    net: BayesianNet,
     test_data: Tensor,
     device: torch.device,
     samples: int,

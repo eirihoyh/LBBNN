@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 import torch
 from torch import Tensor
 
+from ._types import BayesianNet
 
-def nr_hidden_layers(net: Any) -> int:
+
+def nr_hidden_layers(net: BayesianNet) -> int:
     """Return the number of hidden layers in the network.
 
     Args:
@@ -19,7 +19,7 @@ def nr_hidden_layers(net: Any) -> int:
     return len(net.linears) - 1
 
 
-def weight_matrices(net: Any) -> list[Tensor]:
+def weight_matrices(net: BayesianNet) -> list[Tensor]:
     """Return detached copies of the network weight means.
 
     Args:
@@ -31,7 +31,7 @@ def weight_matrices(net: Any) -> list[Tensor]:
     return [layer.weight_mu.detach().clone() for layer in net.linears]
 
 
-def weight_matrices_numpy(net: Any, flow: bool = False) -> list[np.ndarray]:
+def weight_matrices_numpy(net: BayesianNet, flow: bool = False) -> list[np.ndarray]:
     """Return weight means as NumPy arrays.
 
     Args:
@@ -52,7 +52,7 @@ def weight_matrices_numpy(net: Any, flow: bool = False) -> list[np.ndarray]:
     return weights
 
 
-def z_matrices(net: Any) -> list[Tensor]:
+def z_matrices(net: BayesianNet) -> list[Tensor]:
     """Return detached copies of available latent inclusion matrices.
 
     Args:
@@ -70,7 +70,7 @@ def z_matrices(net: Any) -> list[Tensor]:
     return values
 
 
-def z_matrices_numpy(net: Any) -> list[np.ndarray]:
+def z_matrices_numpy(net: BayesianNet) -> list[np.ndarray]:
     """Return latent inclusion matrices as NumPy arrays.
 
     Args:
@@ -82,7 +82,7 @@ def z_matrices_numpy(net: Any) -> list[np.ndarray]:
     return [tensor.detach().cpu().numpy() for tensor in z_matrices(net)]
 
 
-def weight_matrices_std(net: Any) -> list[Tensor]:
+def weight_matrices_std(net: BayesianNet) -> list[Tensor]:
     """Return detached copies of the weight standard deviations.
 
     Args:
@@ -97,7 +97,7 @@ def weight_matrices_std(net: Any) -> list[Tensor]:
     ]
 
 
-def weight_matrices_std_numpy(net: Any) -> list[np.ndarray]:
+def weight_matrices_std_numpy(net: BayesianNet) -> list[np.ndarray]:
     """Return weight standard deviations as NumPy arrays.
 
     Args:
@@ -109,7 +109,7 @@ def weight_matrices_std_numpy(net: Any) -> list[np.ndarray]:
     return [tensor.detach().cpu().numpy() for tensor in weight_matrices_std(net)]
 
 
-def get_alphas(net: Any) -> list[Tensor]:
+def get_alphas(net: BayesianNet) -> list[Tensor]:
     """Return detached copies of the inclusion probabilities.
 
     Args:
@@ -121,7 +121,7 @@ def get_alphas(net: Any) -> list[Tensor]:
     return [torch.sigmoid(layer.lambdal).detach().cpu().clone() for layer in net.linears]
 
 
-def get_alphas_numpy(net: Any) -> list[np.ndarray]:
+def get_alphas_numpy(net: BayesianNet) -> list[np.ndarray]:
     """Return inclusion probabilities as NumPy arrays.
 
     Args:
@@ -134,7 +134,7 @@ def get_alphas_numpy(net: Any) -> list[np.ndarray]:
 
 
 def clean_alpha(
-    net: Any,
+    net: BayesianNet,
     threshold: float,
     alpha_list: list[Tensor] | None = None,
 ) -> list[Tensor]:
@@ -177,7 +177,7 @@ def clean_alpha(
 
 
 def clean_alpha_class(
-    net: Any,
+    net: BayesianNet,
     threshold: float,
     class_in_focus: int = 0,
     alpha_list: list[Tensor] | None = None,
@@ -241,7 +241,7 @@ def network_density_reduction(
 
 def create_layer_name_list(
     n_layers: int | None = None,
-    net: Any | None = None,
+    net: BayesianNet | None = None,
 ) -> list[str]:
     """Create readable names for the input, hidden, and output layers.
 
@@ -267,7 +267,7 @@ def create_layer_name_list(
 
 
 def input_inclusion_prob(
-    net: Any,
+    net: BayesianNet,
     a: list[np.ndarray] | None = None,
 ) -> dict[str, float]:
     """Compute input inclusion probabilities from each layer.
@@ -312,7 +312,7 @@ def input_inclusion_prob(
     return prob_paths
 
 
-def expected_number_of_weights(net: Any) -> float:
+def expected_number_of_weights(net: BayesianNet) -> float:
     """Return the expected number of active weights in the network.
 
     Args:
@@ -369,7 +369,7 @@ def average_path_length(
     return float(np.mean(sum_dists)) if sum_dists.size else 0.0, sum_dists
 
 
-def prob_width(net: Any, p: int) -> dict[int, float]:
+def prob_width(net: BayesianNet, p: int) -> dict[int, float]:
     """Compute capped marginal inclusion probabilities for each input.
 
     Args:
@@ -386,7 +386,7 @@ def prob_width(net: Any, p: int) -> dict[int, float]:
 
 
 def get_weight_and_bias_std(
-    net: Any,
+    net: BayesianNet,
     alphas_numpy: list[np.ndarray],
     threshold: float = 0.5,
 ) -> list[np.ndarray]:
@@ -409,7 +409,7 @@ def get_weight_and_bias_std(
 
 
 def get_weight_and_bias(
-    net: Any,
+    net: BayesianNet,
     alphas_numpy: list[np.ndarray],
     median: bool = True,
     sample: bool = False,

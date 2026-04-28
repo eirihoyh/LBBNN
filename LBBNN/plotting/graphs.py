@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ._common import ensure_parent, get_graphviz_digraph
+from .._types import BayesianNet
 from .. import inspection as insp
 
 
@@ -152,7 +153,7 @@ def plot_whole_path_graph_weight(
 
 
 def run_path_graph(
-    net: Any,
+    net: BayesianNet,
     threshold: float = 0.5,
     save_path: str = "path_graphs/all_paths_input_skip",
     show: bool = False,
@@ -181,7 +182,7 @@ def run_path_graph(
 
 
 def run_path_graph_weight(
-    net: Any,
+    net: BayesianNet,
     threshold: float = 0.5,
     save_path: str = "path_graphs/all_paths_input_skip",
     show: bool = False,
@@ -212,7 +213,7 @@ def run_path_graph_weight(
 
 
 def plot_path_individual_classes(
-    net: Any,
+    net: BayesianNet,
     classes: int,
     path: str = "individual_classes",
     show: bool = False,

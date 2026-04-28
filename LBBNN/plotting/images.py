@@ -7,12 +7,13 @@ import torch
 from numpy.typing import NDArray
 
 from ._common import ensure_parent, get_matplotlib
+from .._types import BayesianNet
 from .. import explain as expl
 from .. import inspection as insp
 
 
 def plot_model_vision_image(
-    net: Any,
+    net: BayesianNet,
     train_data: NDArray[np.floating],
     train_target: NDArray[np.integer] | NDArray[np.floating],
     c: int = 0,
@@ -120,7 +121,7 @@ def plot_model_vision_image(
 
 
 def _sample_multiclass_probs(
-    net: Any,
+    net: BayesianNet,
     explain_this: torch.Tensor,
     n_draws: int = 1000,
 ) -> NDArray[np.floating]:
@@ -151,7 +152,7 @@ def _sample_multiclass_probs(
 
 def _plot_img_cred(
     cred_contribution: dict[int, dict[int, NDArray[np.floating]]],
-    net: Any,
+    net: BayesianNet,
     explain_this: torch.Tensor,
     n_classes: int,
     class_names: Sequence[Any] | None,
@@ -257,7 +258,7 @@ def _plot_img_cred(
 
 
 def plot_local_contribution_images_contribution_empirical(
-    net: Any,
+    net: BayesianNet,
     explain_this: torch.Tensor,
     n_classes: int = 1,
     class_names: Sequence[Any] | None = None,
@@ -306,7 +307,7 @@ def plot_local_contribution_images_contribution_empirical(
 
 
 def plot_local_contribution_images_contribution_empirical_magnitude(
-    net: Any,
+    net: BayesianNet,
     explain_this: torch.Tensor,
     n_classes: int = 1,
     class_names: Sequence[Any] | None = None,

@@ -11,11 +11,12 @@ from torch import Tensor
 import itertools
 
 from ._common import ensure_parent, get_matplotlib
+from .._types import BayesianNet
 from .. import explain as expl
 
 
 def plot_local_contribution_empirical(
-    net: Any,
+    net: BayesianNet,
     data: Tensor,
     sample: bool = True,
     median: bool = True,
@@ -152,7 +153,7 @@ def plot_local_contribution_empirical(
 
 
 def plot_local_explain_piecewise_linear_act(
-    net: Any,
+    net: BayesianNet,
     input_data: Tensor,
     median: bool = True,
     sample: bool = True,

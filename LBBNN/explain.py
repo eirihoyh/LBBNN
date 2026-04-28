@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
 from torch import Tensor
 
+from ._types import BayesianNet
 from .inspection import clean_alpha_class, get_alphas_numpy, get_weight_and_bias
 
 
@@ -114,7 +114,7 @@ def find_active_weights(
 
 
 def local_explain_relu(
-    net: Any,
+    net: BayesianNet,
     input_data: Tensor,
     threshold: float = 0.5,
     median: bool = True,
@@ -226,7 +226,7 @@ def local_explain_relu(
 
 
 def local_explain_relu_magnitude(
-    net: Any,
+    net: BayesianNet,
     input_data: Tensor,
     threshold: float = 0.5,
     median: bool = True,
@@ -345,8 +345,11 @@ def local_explain_relu_magnitude(
     return mean_contribution, cred_contribution, np.array(preds)
 
 
+
+# NOTE: Only the below ones used and tested in this library
+
 def local_explain_piecewise_linear_act(
-    net: Any,
+    net: BayesianNet,
     input_data: Tensor,
     median: bool = True,
     sample: bool = True,
@@ -418,7 +421,7 @@ def local_explain_piecewise_linear_act(
 
 
 def what_if_explanations(
-    net: Any,
+    net: BayesianNet,
     data: Tensor,
     feature_index: int,
     minimum: float,

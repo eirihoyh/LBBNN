@@ -5,10 +5,11 @@ from typing import Any
 import numpy as np
 
 from ._common import ensure_parent
+from .._types import BayesianNet
 from .. import inspection as insp
 
 
-def get_metrics(net: Any, threshold: float = 0.5) -> dict[str, Any]:
+def get_metrics(net: BayesianNet, threshold: float = 0.5) -> dict[str, Any]:
     """Compute structural summary metrics for a network.
 
     Args:
@@ -51,7 +52,7 @@ def get_metrics(net: Any, threshold: float = 0.5) -> dict[str, Any]:
 
 
 def save_metrics(
-    net: Any,
+    net: BayesianNet,
     threshold: float = 0.5,
     path: str = "results/all_metrics",
 ) -> tuple[str, str]:
