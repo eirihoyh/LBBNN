@@ -30,7 +30,7 @@ class BayesianLinearLRT(nn.Module):
         mu_prior: float = 0.0,
         weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
-        p: int | None = None,
+        n_skip_features: int | None = None,
     ) -> None:
         """Initialize the Bayesian linear layer.
 
@@ -48,7 +48,8 @@ class BayesianLinearLRT(nn.Module):
                 initialization of the weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
-            p: Number of skip-input features forced to start with high
+            n_skip_features: Number of skip-input features (the trailing
+                columns of the weight matrix) forced to start with high
                 inclusion probability.
 
         Returns:
@@ -72,8 +73,8 @@ class BayesianLinearLRT(nn.Module):
             lower_init_lambda,
             upper_init_lambda,
         )
-        if p is not None:
-            init_lambda[:, -p:] = 5.0
+        if n_skip_features is not None:
+            init_lambda[:, -n_skip_features:] = 5.0
 
         self.lambdal = nn.Parameter(init_lambda)
 
