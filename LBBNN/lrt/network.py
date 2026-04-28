@@ -19,7 +19,10 @@ class BayesianNetworkLRT(nn.Module):
         p: int,
         hidden_layers: int,
         a_prior: float = 0.05,
-        std_prior: float = 2.5,
+        sigma_prior: float = 2.5,
+        mu_prior: float = 0.0,
+        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
+        weight_rho_init_mean: float = -9.0,
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
@@ -30,15 +33,20 @@ class BayesianNetworkLRT(nn.Module):
     ) -> None:
         """Initialize the Bayesian network.
 
-        NOTE: First column of input is assmued to only consist of ones 
+        NOTE: First column of input is assmued to only consist of ones
             (works as the intercept/bias).
-            
+
         Args:
             dim: Number of hidden units in each hidden layer.
             p: Number of input features.
             hidden_layers: Number of hidden layers.
             a_prior: Prior inclusion probability.
-            std_prior: Prior standard deviation for the weights.
+            sigma_prior: Prior standard deviation for the weights.
+            mu_prior: Prior mean for the weights.
+            weight_mu_init_range: Lower and upper bounds for uniform
+                initialization of the weight means.
+            weight_rho_init_mean: Mean of the Gaussian used to initialize
+                the rho-parameter (softplus-mapped to weight std).
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in the hidden layers.
@@ -59,45 +67,30 @@ class BayesianNetworkLRT(nn.Module):
 
         nr_var = p if high_init_covariate_prob else None
 
+        layer_kwargs = dict(
+            a_prior=a_prior,
+            sigma_prior=sigma_prior,
+            mu_prior=mu_prior,
+            weight_mu_init_range=weight_mu_init_range,
+            weight_rho_init_mean=weight_rho_init_mean,
+            lower_init_alpha=lower_init_alpha,
+            upper_init_alpha=upper_init_alpha,
+            p=nr_var,
+        )
+
         self.linears = nn.ModuleList(
-            [
-                BayesianLinearLRT(
-                    p,
-                    dim,
-                    a_prior=a_prior,
-                    std_prior=std_prior,
-                    lower_init_alpha=lower_init_alpha,
-                    upper_init_alpha=upper_init_alpha,
-                    p=nr_var,
-                )
-            ]
+            [BayesianLinearLRT(p, dim, **layer_kwargs)]
         )
 
         self.linears.extend(
             [
-                BayesianLinearLRT(
-                    dim + p,
-                    dim,
-                    a_prior=a_prior,
-                    std_prior=std_prior,
-                    lower_init_alpha=lower_init_alpha,
-                    upper_init_alpha=upper_init_alpha,
-                    p=nr_var,
-                )
+                BayesianLinearLRT(dim + p, dim, **layer_kwargs)
                 for _ in range(hidden_layers - 1)
             ]
         )
 
         self.linears.append(
-            BayesianLinearLRT(
-                dim + p,
-                n_classes,
-                a_prior=a_prior,
-                std_prior=std_prior,
-                lower_init_alpha=lower_init_alpha,
-                upper_init_alpha=upper_init_alpha,
-                p=nr_var,
-            )
+            BayesianLinearLRT(dim + p, n_classes, **layer_kwargs)
         )
 
         if custom_loss:

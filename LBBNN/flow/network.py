@@ -19,7 +19,13 @@ class BayesianNetworkFlow(nn.Module):
         p: int,
         hidden_layers: int,
         a_prior: float = 0.05,
+        sigma_prior: float = 2.0,
+        mu_prior: float = 0.0,
+        weight_mu_init_range: tuple[float, float] = (-0.01, 0.01),
+        weight_rho_init_mean: float = -9.0,
         num_transforms: int = 2,
+        z_flow_type: str = "IAF",
+        r_flow_type: str = "IAF",
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
@@ -33,7 +39,17 @@ class BayesianNetworkFlow(nn.Module):
             p: Number of input features.
             hidden_layers: Number of hidden layers.
             a_prior: Prior inclusion probability.
+            sigma_prior: Prior standard deviation for the weights.
+            mu_prior: Prior mean for the weights.
+            weight_mu_init_range: Lower and upper bounds for uniform
+                initialization of the weight means.
+            weight_rho_init_mean: Mean of the Gaussian used to initialize
+                the rho-parameter (softplus-mapped to weight std).
             num_transforms: Number of flow transforms per layer.
+            z_flow_type: Transform type used for the variational `z` flow
+                (``"IAF"`` or ``"RNVP"``).
+            r_flow_type: Transform type used for the auxiliary `r` flow
+                (``"IAF"`` or ``"RNVP"``).
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in hidden layers.
@@ -50,42 +66,32 @@ class BayesianNetworkFlow(nn.Module):
         self.multiclass = n_classes > 1
         self.act = act_func
 
+        layer_kwargs = dict(
+            a_prior=a_prior,
+            sigma_prior=sigma_prior,
+            mu_prior=mu_prior,
+            weight_mu_init_range=weight_mu_init_range,
+            weight_rho_init_mean=weight_rho_init_mean,
+            num_transforms=num_transforms,
+            z_flow_type=z_flow_type,
+            r_flow_type=r_flow_type,
+            lower_init_alpha=lower_init_alpha,
+            upper_init_alpha=upper_init_alpha,
+        )
+
         self.linears = nn.ModuleList(
-            [
-                BayesianLinearFlow(
-                    p,
-                    dim,
-                    a_prior=a_prior,
-                    num_transforms=num_transforms,
-                    lower_init_alpha=lower_init_alpha,
-                    upper_init_alpha=upper_init_alpha,
-                )
-            ]
+            [BayesianLinearFlow(p, dim, **layer_kwargs)]
         )
 
         self.linears.extend(
             [
-                BayesianLinearFlow(
-                    dim + p,
-                    dim,
-                    a_prior=a_prior,
-                    num_transforms=num_transforms,
-                    lower_init_alpha=lower_init_alpha,
-                    upper_init_alpha=upper_init_alpha,
-                )
+                BayesianLinearFlow(dim + p, dim, **layer_kwargs)
                 for _ in range(hidden_layers - 1)
             ]
         )
 
         self.linears.append(
-            BayesianLinearFlow(
-                dim + p,
-                n_classes,
-                a_prior=a_prior,
-                num_transforms=num_transforms,
-                lower_init_alpha=lower_init_alpha,
-                upper_init_alpha=upper_init_alpha,
-            )
+            BayesianLinearFlow(dim + p, n_classes, **layer_kwargs)
         )
 
         if classification and self.multiclass:

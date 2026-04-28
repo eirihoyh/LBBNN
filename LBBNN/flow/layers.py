@@ -8,9 +8,6 @@ from torch import Tensor
 
 from .transforms import PropagateFlow
 
-Z_FLOW_TYPE = "IAF"
-R_FLOW_TYPE = "IAF"
-
 
 def _log_pi(device: torch.device, dtype: torch.dtype) -> Tensor:
     """Return the logarithm of pi as a tensor.
@@ -36,6 +33,12 @@ class BayesianLinearFlow(nn.Module):
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
         a_prior: float = 0.1,
+        sigma_prior: float = 2.0,
+        mu_prior: float = 0.0,
+        weight_mu_init_range: tuple[float, float] = (-0.01, 0.01),
+        weight_rho_init_mean: float = -9.0,
+        z_flow_type: str = "IAF",
+        r_flow_type: str = "IAF",
     ) -> None:
         """Initialize the flow-based Bayesian linear layer.
 
@@ -46,6 +49,16 @@ class BayesianLinearFlow(nn.Module):
             lower_init_alpha: Lower bound for inclusion probability initialization.
             upper_init_alpha: Upper bound for inclusion probability initialization.
             a_prior: Prior inclusion probability.
+            sigma_prior: Prior standard deviation for the weights.
+            mu_prior: Prior mean for the weights.
+            weight_mu_init_range: Lower and upper bounds for uniform
+                initialization of the weight means.
+            weight_rho_init_mean: Mean of the Gaussian used to initialize
+                the rho-parameter (softplus-mapped to weight std).
+            z_flow_type: Transform type used for the variational `z` flow
+                (``"IAF"`` or ``"RNVP"``).
+            r_flow_type: Transform type used for the auxiliary `r` flow
+                (``"IAF"`` or ``"RNVP"``).
 
         Returns:
             None.
@@ -57,12 +70,11 @@ class BayesianLinearFlow(nn.Module):
 
         # mean, std and incusion prob paramters
         self.weight_mu = nn.Parameter(
-            torch.empty(out_features, in_features).uniform_(-0.01, 0.01)
+            torch.empty(out_features, in_features).uniform_(*weight_mu_init_range)
         )
         self.weight_rho = nn.Parameter(
-            -9.0 + 0.1 * torch.randn(out_features, in_features)
+            weight_rho_init_mean + 0.1 * torch.randn(out_features, in_features)
         )
-        self.weight_sigma = torch.empty_like(self.weight_rho)
 
         self.lambdal = nn.Parameter(
             torch.empty(out_features, in_features).uniform_(
@@ -72,10 +84,13 @@ class BayesianLinearFlow(nn.Module):
         )
 
         # Prior parameters
-        self.register_buffer("mu_prior", torch.zeros(out_features, in_features))
+        self.register_buffer(
+            "mu_prior",
+            torch.full((out_features, in_features), mu_prior),
+        )
         self.register_buffer(
             "sigma_prior",
-            torch.full((out_features, in_features), 2.0),
+            torch.full((out_features, in_features), sigma_prior),
         )
         self.register_buffer(
             "alpha_prior",
@@ -89,8 +104,8 @@ class BayesianLinearFlow(nn.Module):
         self.r0_b1 = nn.Parameter(torch.randn(in_features))
         self.r0_b2 = nn.Parameter(torch.randn(in_features))
 
-        self.z_flow = PropagateFlow(Z_FLOW_TYPE, in_features, num_transforms)
-        self.r_flow = PropagateFlow(R_FLOW_TYPE, in_features, num_transforms)
+        self.z_flow = PropagateFlow(z_flow_type, in_features, num_transforms)
+        self.r_flow = PropagateFlow(r_flow_type, in_features, num_transforms)
 
         self.z: Tensor | None = None
         self.hardtanh = nn.Hardtanh()

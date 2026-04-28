@@ -26,7 +26,10 @@ class BayesianLinearLRT(nn.Module):
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
         a_prior: float = 0.1,
-        std_prior: float = 2.5,
+        sigma_prior: float = 2.5,
+        mu_prior: float = 0.0,
+        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
+        weight_rho_init_mean: float = -9.0,
         p: int | None = None,
     ) -> None:
         """Initialize the Bayesian linear layer.
@@ -39,7 +42,12 @@ class BayesianLinearLRT(nn.Module):
             upper_init_alpha: Upper bound for uniform initialization of
                 inclusion probability.
             a_prior: Prior inclusion probability.
-            std_prior: Prior standard deviation for the weights.
+            sigma_prior: Prior standard deviation for the weights.
+            mu_prior: Prior mean for the weights.
+            weight_mu_init_range: Lower and upper bounds for uniform
+                initialization of the weight means.
+            weight_rho_init_mean: Mean of the Gaussian used to initialize
+                the rho-parameter (softplus-mapped to weight std).
             p: Number of skip-input features forced to start with high
                 inclusion probability.
 
@@ -47,18 +55,16 @@ class BayesianLinearLRT(nn.Module):
             None.
         """
         super().__init__()
-        
+
         lower_init_lambda = math.log(lower_init_alpha / (1-lower_init_alpha))
         upper_init_lambda = math.log(upper_init_alpha / (1-upper_init_alpha))
-        
-        device = get_default_device()
 
         # Variational parameters for the weights.
         self.weight_mu = nn.Parameter(
-            torch.empty(out_features, in_features).uniform_(-1.2, 1.2)
+            torch.empty(out_features, in_features).uniform_(*weight_mu_init_range)
         )
         self.weight_rho = nn.Parameter(
-            -9.0 + 0.1 * torch.randn(out_features, in_features)
+            weight_rho_init_mean + 0.1 * torch.randn(out_features, in_features)
         )
 
         # Inclusion probabilities.
@@ -72,8 +78,8 @@ class BayesianLinearLRT(nn.Module):
         self.lambdal = nn.Parameter(init_lambda)
 
         # Prior parameters
-        self.register_buffer("mu_prior", torch.zeros(out_features, in_features))
-        self.register_buffer("sigma_prior", torch.full((out_features, in_features), std_prior))
+        self.register_buffer("mu_prior", torch.full((out_features, in_features), mu_prior))
+        self.register_buffer("sigma_prior", torch.full((out_features, in_features), sigma_prior))
         self.register_buffer("alpha_prior", torch.full((out_features, in_features), a_prior))
 
         # KL divergence term updated during forward passes
