@@ -25,7 +25,7 @@ class BayesianNetworkLRT(nn.Module):
         weight_rho_init_mean: float = -9.0,
         classification: bool = True,
         n_classes: int = 1,
-        act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
+        act_func: Callable[[Tensor], Tensor] = torch.relu,
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
         high_init_covariate_prob: bool = False,
@@ -65,7 +65,7 @@ class BayesianNetworkLRT(nn.Module):
         self.multiclass = n_classes > 1
         self.act = act_func
 
-        nr_var = p if high_init_covariate_prob else None
+        n_skip_features = p if high_init_covariate_prob else None
 
         layer_kwargs = dict(
             a_prior=a_prior,
@@ -75,7 +75,7 @@ class BayesianNetworkLRT(nn.Module):
             weight_rho_init_mean=weight_rho_init_mean,
             lower_init_alpha=lower_init_alpha,
             upper_init_alpha=upper_init_alpha,
-            p=nr_var,
+            n_skip_features=n_skip_features,
         )
 
         self.linears = nn.ModuleList(

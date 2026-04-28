@@ -28,7 +28,7 @@ class BayesianNetworkFlow(nn.Module):
         r_flow_type: str = "IAF",
         classification: bool = True,
         n_classes: int = 1,
-        act_func: Callable[[Tensor], Tensor] = torch.sigmoid,
+        act_func: Callable[[Tensor], Tensor] = torch.relu,
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
     ) -> None:
