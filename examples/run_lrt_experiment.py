@@ -194,7 +194,7 @@ def main():
             p=p,
             device=DEVICE,
             nr_weights=nr_weights,
-            multiclass=False,
+            task="binary",
             verbose=False,
         )
 
@@ -202,8 +202,7 @@ def main():
             net=model,
             val_data=val_data,
             device=DEVICE,
-            multiclass=False,
-            reg=False,
+            task="binary",
             verbose=False,
         )
 
