@@ -8,10 +8,10 @@ def test_train_epoch_and_validate_run():
     x = torch.randn(16, 5)
     y = (torch.rand(16) > 0.5).float()
     train_data = torch.cat([x, y.unsqueeze(1)], dim=1)
-    nll, loss = train_epoch(net=model, train_data=train_data, optimizer=optimizer, batch_size=8, num_batches=2, p=5, device=torch.device('cpu'), nr_weights=sum(p.numel() for p in model.parameters()), multiclass=False, verbose=False)
+    nll, loss = train_epoch(net=model, train_data=train_data, optimizer=optimizer, batch_size=8, num_batches=2, p=5, device=torch.device('cpu'), nr_weights=sum(p.numel() for p in model.parameters()), task="binary", verbose=False)
     assert isinstance(nll, float)
     assert isinstance(loss, float)
-    val_nll, val_loss, metric = validate(net=model, val_data=train_data, device=torch.device('cpu'), multiclass=False, reg=False, verbose=False)
+    val_nll, val_loss, metric = validate(net=model, val_data=train_data, device=torch.device('cpu'), task="binary", verbose=False)
     assert isinstance(val_nll, float)
     assert isinstance(val_loss, float)
     assert 0.0 <= metric <= 1.0

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 import torch
 from torch import Tensor
@@ -11,6 +13,8 @@ from .inspection import (
     expected_number_of_weights,
     network_density_reduction,
 )
+
+Task = Literal["binary", "multiclass", "regression"]
 
 
 def _r2_score(y_pred: Tensor, y_true: Tensor) -> float:
@@ -60,7 +64,7 @@ def train_epoch(
     p: int,
     device: torch.device,
     nr_weights: int,
-    multiclass: bool = False,
+    task: Task = "binary",
     verbose: bool = False,
     post_train: bool = False,
 ) -> tuple[float | None, float | None]:
@@ -75,7 +79,7 @@ def train_epoch(
         p: Number of input features.
         device: Torch device used for computation.
         nr_weights: Total number of weights in the network.
-        multiclass: Whether the task is multiclass classification.
+        task: ``"binary"``, ``"multiclass"``, or ``"regression"``.
         verbose: Whether to print batch-level metrics.
         post_train: Whether to use post-training inference behavior.
 
@@ -87,6 +91,7 @@ def train_epoch(
     indices = np.random.permutation(len(train_data))
     train_data = train_data[indices]
 
+    multiclass = task == "multiclass"
     last_nll: float | None = None
     last_loss: float | None = None
 
@@ -129,8 +134,7 @@ def validate(
     net: BayesianNet,
     val_data: Tensor,
     device: torch.device,
-    multiclass: bool = False,
-    reg: bool = False,
+    task: Task = "binary",
     verbose: bool = False,
 ) -> tuple[float, float, float]:
     """Evaluate the network on validation data.
@@ -139,8 +143,9 @@ def validate(
         net: Neural network model with `loss` and `kl` methods.
         val_data: Validation data tensor where the last column is the target.
         device: Torch device used for computation.
-        multiclass: Whether the task is multiclass classification.
-        reg: Whether the task is regression.
+        task: ``"binary"``, ``"multiclass"``, or ``"regression"``. Selects
+            both the target dtype and the reported metric (accuracy for
+            classification, R² for regression).
         verbose: Whether to print validation metrics.
 
     Returns:
@@ -158,7 +163,7 @@ def validate(
             calculate_log_probs=True,
         )
 
-        if multiclass:
+        if task == "multiclass":
             target = y_val.long().view(-1)
             nll = net.loss(outputs, target)
             metric_value = float(
@@ -168,7 +173,7 @@ def validate(
             target = y_val.unsqueeze(1).float()
             nll = net.loss(outputs, target)
 
-            if reg:
+            if task == "regression":
                 metric_value = _r2_score(outputs[:, 0], target[:, 0])
             else:
                 metric_value = float(
@@ -199,9 +204,8 @@ def test_ensemble(
     device: torch.device,
     samples: int,
     classes: int = 1,
-    reg: bool = True,
+    task: Task = "binary",
     verbose: bool = False,
-    multiclass: bool = False,
 ) -> tuple[list[float], list[float]]:
     """Evaluate ensemble and median-style predictions on test data.
 
@@ -211,8 +215,9 @@ def test_ensemble(
         device: Torch device used for computation.
         samples: Number of stochastic forward passes.
         classes: Number of output classes or output dimension.
-        reg: Whether the task is regression.
-        multiclass: Whether the task is multiclass classification.
+        task: ``"binary"``, ``"multiclass"``, or ``"regression"``. For
+            regression, RMSE and R² are returned in addition to the
+            density metrics.
 
     Returns:
         A tuple of two metric lists:
@@ -251,12 +256,12 @@ def test_ensemble(
         density.append(density_median)
         used_weights.append(used_weights_median)
 
-        if reg:
+        if task == "regression":
             ensemble_metrics.append(_rmse(outputs_mean[:, 0], y_test))
             ensemble_metrics_median.append(_rmse(outputs_median_mean[:, 0], y_test))
             ensemble_r2.append(_r2_score(outputs_mean[:, 0], y_test))
             ensemble_r2_median.append(_r2_score(outputs_median_mean[:, 0], y_test))
-        elif multiclass:
+        elif task == "multiclass":
             target = y_test.long().view(-1)
             ensemble_metrics.append(
                 float((outputs_mean.argmax(dim=1) == target).float().mean().cpu())
@@ -287,7 +292,7 @@ def test_ensemble(
         float(np.mean(used_weights)),
     ]
 
-    if reg:
+    if task == "regression":
         metrics.append(float(np.mean(ensemble_r2)))
         metrics_median.append(float(np.mean(ensemble_r2_median)))
 
