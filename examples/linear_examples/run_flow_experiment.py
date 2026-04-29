@@ -1,5 +1,9 @@
 import math
+import sys
 from pathlib import Path
+
+# included such that _common.py from examples/ is available regardless of where the script is ran from
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 import torch
