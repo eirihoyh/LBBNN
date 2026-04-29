@@ -315,11 +315,16 @@ def input_inclusion_prob(
 def expected_number_of_weights(net: BayesianNet) -> float:
     """Return the expected number of active weights in the network.
 
+    The output layer's alpha matrix has ``n_classes`` rows, so multi-class
+    networks contribute ``n_classes`` × (per-class output weights) here.
+    The value is therefore comparable across runs of the same architecture
+    but not directly across networks with different ``n_classes``.
+
     Args:
         net: Network object with alpha values available.
 
     Returns:
-        Expected number of active weights.
+        Expected number of active weights, summed over every layer.
     """
     return float(sum(np.sum(alpha) for alpha in get_alphas_numpy(net)))
 
