@@ -1,4 +1,4 @@
-from .transforms import PropagateFlow, RNVP, IAF
+from ..transforms import PropagateFlow, RNVP, IAF
 from .layers import BayesianLinearFlow
 from .network import BayesianNetworkFlow
 

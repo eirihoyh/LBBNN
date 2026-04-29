@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from .transforms import PropagateFlow
+from ..transforms import PropagateFlow
 
 
 def _log_pi(device: torch.device, dtype: torch.dtype) -> Tensor:
