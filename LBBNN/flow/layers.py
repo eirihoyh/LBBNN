@@ -108,13 +108,19 @@ class BayesianLinearFlow(nn.Module):
         self.r_flow = PropagateFlow(r_flow_type, in_features, num_transforms)
 
         self.z: Tensor | None = None
+        # Cache populated by `sample_z`/`forward` so that a subsequent
+        # `kl_div()` call evaluates the variational bound at the *same*
+        # latent sample as the one used to compute the activations.
+        self._cached_zk: Tensor | None = None
+        self._cached_log_det_q: Tensor | None = None
         self.hardtanh = nn.Hardtanh()
 
     def sample_z(self) -> tuple[Tensor, Tensor]:
         """Sample the latent flow variable.
 
-        Args:
-            None.
+        Also caches ``z``, ``zk`` and ``log_det_q`` on the layer so that
+        :meth:`kl_div` reuses the same sample (the variational bound is
+        defined for one shared draw of ``z``).
 
         Returns:
             A tuple containing the transformed latent sample and the
@@ -125,20 +131,30 @@ class BayesianLinearFlow(nn.Module):
 
         self.z = self.q0_mean + q0_std * epsilon_z
         zk, log_det_q = self.z_flow(self.z)
+        log_det_q = log_det_q.squeeze()
 
-        return zk, log_det_q.squeeze()
+        self._cached_zk = zk
+        self._cached_log_det_q = log_det_q
+
+        return zk, log_det_q
 
     def kl_div(self) -> Tensor:
         """Compute the KL divergence term for the layer.
 
-        Args:
-            None.
+        Reuses the latent sample produced by the most recent
+        :meth:`forward` (or :meth:`sample_z`) when available, so the KL
+        is evaluated at the same draw of ``z`` as the activations. If no
+        forward has been done yet a fresh sample is taken.
 
         Returns:
             The KL divergence for the layer.
         """
 
-        zk, log_det_q = self.sample_z()
+        if self._cached_zk is not None and self._cached_log_det_q is not None:
+            zk = self._cached_zk
+            log_det_q = self._cached_log_det_q
+        else:
+            zk, log_det_q = self.sample_z()
 
         if self.z is None:
             raise RuntimeError("Latent variable z must be sampled before KL.")
