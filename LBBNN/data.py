@@ -9,18 +9,22 @@ from numpy.typing import NDArray
 
 def get_data(
     n: int = 10_000,
-    beta: NDArray[np.float64] | Sequence[float] = np.array([-1.0, 1.5, -1.5, 1.0, 1.0, 1.0]),
+    beta: NDArray[np.float64] | Sequence[float] = (-1.0, 1.5, -1.5, 1.0, 1.0, 1.0),
     classification: bool = True,
     non_lin: bool = False,
-    squared_terms: bool =False,
+    squared_terms: bool = False,
+    seed: int | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
-    """Generate a simple one-dimensional synthetic dataset.
+    """Generate a simple two-dimensional synthetic dataset.
 
     Args:
         n: Number of observations.
         beta: Coefficients used to generate the target.
         classification: Whether to convert the target into binary labels.
-        non_lin: Whether to use a quadratic relationship instead of a linear one.
+        non_lin: Whether to add a multiplicative interaction term.
+        squared_terms: Whether to add quadratic terms in each covariate.
+        seed: Random seed for reproducibility. If ``None`` a fresh
+            generator is used and results are non-deterministic.
 
     Returns:
         A tuple containing:
@@ -28,23 +32,30 @@ def get_data(
             - The generated target values or class labels.
             - The feature matrix with an intercept column.
     """
+    rng = np.random.default_rng(seed)
     beta_array = np.asarray(beta, dtype=float)
 
-    np.random.seed(42)
-    x = np.random.randn(n, 2)
+    x = rng.standard_normal((n, 2))
     x_with_intercept = np.hstack([np.ones((x.shape[0], 1)), x])
 
-    y = beta[0] + beta[1]*x_with_intercept[:,1] + beta[2]*x_with_intercept[:,2]
-    
+    y = (
+        beta_array[0]
+        + beta_array[1] * x_with_intercept[:, 1]
+        + beta_array[2] * x_with_intercept[:, 2]
+    )
+
     if non_lin:
-        y += beta[3]*x_with_intercept[:,1]*x_with_intercept[:,2]
+        y += beta_array[3] * x_with_intercept[:, 1] * x_with_intercept[:, 2]
 
     if squared_terms:
-        y += beta[4]*(x_with_intercept[:,1]**2) + beta[5]*(x_with_intercept[:,2]**2)
+        y += (
+            beta_array[4] * x_with_intercept[:, 1] ** 2
+            + beta_array[5] * x_with_intercept[:, 2] ** 2
+        )
 
     if classification:
         probabilities = 1.0 / (1.0 + np.exp(-y))
-        y = np.random.binomial(1, probabilities).astype(float)
+        y = rng.binomial(1, probabilities).astype(float)
 
     return x.astype(float), y.astype(float), x_with_intercept.astype(float)
 
