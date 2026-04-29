@@ -203,6 +203,7 @@ class BayesianLinearFlow(nn.Module):
         self,
         input: Tensor,
         ensemble: bool = False,
+        sample: bool = False,
         post_train: bool = False,
     ) -> Tensor:
         """Compute the forward pass through the layer.
@@ -210,6 +211,9 @@ class BayesianLinearFlow(nn.Module):
         Args:
             input: Input tensor of shape ``(batch_size, in_features)``.
             ensemble: Whether to use the local reparameterization form.
+            sample: When in deterministic mode (``ensemble=False`` and
+                not training), whether to draw weights from
+                ``N(weight_mu * zk, weight_sigma)`` or use the mean.
             post_train: Whether to threshold the inclusion probabilities.
 
         Returns:
@@ -238,7 +242,11 @@ class BayesianLinearFlow(nn.Module):
                 torch.clamp(var_bias, min=0.0)
             ) * noise
         else:
-            weights = torch.normal(self.weight_mu * zk, weight_sigma)
+            weights = (
+                torch.normal(self.weight_mu * zk, weight_sigma)
+                if sample
+                else self.weight_mu * zk
+            )
             gates = (alpha.detach() > 0.5).float()
             activations = input @ (weights * gates).T
 

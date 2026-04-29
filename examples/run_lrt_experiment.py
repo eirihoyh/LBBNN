@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from LBBNN import (
-    InputSkipLRTNetwork,
+    BayesianNetworkLRT,
     get_data,
     train_epoch,
     validate,
@@ -168,7 +168,7 @@ def main():
     # We use ReLU so that gradient/piecewise-linear 
     # gives exact linear explanations
     # --------------------------------------------------------
-    model = InputSkipLRTNetwork(
+    model = BayesianNetworkLRT(
         dim=DIM,
         p=p,
         hidden_layers=HIDDEN_LAYERS,
@@ -252,7 +252,7 @@ def main():
     )
 
     summary = {
-        "model_type": "InputSkipLRTNetwork",
+        "model_type": "BayesianNetworkLRT",
         "seed": SEED,
         "device": str(DEVICE),
         "n_samples": N_SAMPLES,

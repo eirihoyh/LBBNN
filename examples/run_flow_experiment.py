@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from LBBNN import (
-    InputSkipFlowNetwork,
+    BayesianNetworkFlow,
     get_data,
     train_epoch,
     validate,
@@ -163,7 +163,7 @@ def main():
     # --------------------------------------------------------
     # 2. Model
     # --------------------------------------------------------
-    model = InputSkipFlowNetwork(
+    model = BayesianNetworkFlow(
         dim=DIM,
         p=p,
         hidden_layers=HIDDEN_LAYERS,
@@ -248,7 +248,7 @@ def main():
     )
 
     summary = {
-        "model_type": "InputSkipFlowNetwork",
+        "model_type": "BayesianNetworkFlow",
         "seed": SEED,
         "device": str(DEVICE),
         "n_samples": N_SAMPLES,

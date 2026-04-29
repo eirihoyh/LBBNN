@@ -29,6 +29,7 @@ class BayesianNetworkLRT(nn.Module):
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
         high_init_covariate_prob: bool = False,
+        input_skip: bool = True,
         custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
         """Initialize the Bayesian network.
@@ -54,6 +55,11 @@ class BayesianNetworkLRT(nn.Module):
             upper_init_alpha: Upper bound for inclusion probability initialization.
             high_init_covariate_prob: Whether to initialize skip covariates with
                 high inclusion probability.
+            input_skip: If True (default) every hidden and the output layer
+                receives the original input concatenated to its activations.
+                If False the network behaves as a standard feed-forward MLP
+                with binary gates and the empirical-explain helpers in
+                ``LBBNN.explain`` no longer apply.
 
         Returns:
             None.
@@ -64,8 +70,7 @@ class BayesianNetworkLRT(nn.Module):
         self.classification = classification
         self.multiclass = n_classes > 1
         self.act = act_func
-
-        n_skip_features = p if high_init_covariate_prob else None
+        self.input_skip = input_skip
 
         layer_kwargs = dict(
             a_prior=a_prior,
@@ -75,22 +80,28 @@ class BayesianNetworkLRT(nn.Module):
             weight_rho_init_mean=weight_rho_init_mean,
             lower_init_alpha=lower_init_alpha,
             upper_init_alpha=upper_init_alpha,
-            n_skip_features=n_skip_features,
         )
 
+        # First layer always sees the raw input; high-prob init may apply.
+        n_skip_first = p if high_init_covariate_prob else None
+        # Subsequent layers only have a "skip portion" when input_skip is on.
+        n_skip_other = p if (high_init_covariate_prob and input_skip) else None
+
+        hidden_in = dim + p if input_skip else dim
+
         self.linears = nn.ModuleList(
-            [BayesianLinearLRT(p, dim, **layer_kwargs)]
+            [BayesianLinearLRT(p, dim, n_skip_features=n_skip_first, **layer_kwargs)]
         )
 
         self.linears.extend(
             [
-                BayesianLinearLRT(dim + p, dim, **layer_kwargs)
+                BayesianLinearLRT(hidden_in, dim, n_skip_features=n_skip_other, **layer_kwargs)
                 for _ in range(hidden_layers - 1)
             ]
         )
 
         self.linears.append(
-            BayesianLinearLRT(dim + p, n_classes, **layer_kwargs)
+            BayesianLinearLRT(hidden_in, n_classes, n_skip_features=n_skip_other, **layer_kwargs)
         )
 
         if custom_loss:
@@ -134,10 +145,13 @@ class BayesianNetworkLRT(nn.Module):
             )
         )
 
+        def _next_input(h: Tensor) -> Tensor:
+            return torch.cat((h, x_input), dim=1) if self.input_skip else h
+
         for layer in self.linears[1:-1]:
             x_hidden = self.act(
                 layer(
-                    torch.cat((x_hidden, x_input), dim=1),
+                    _next_input(x_hidden),
                     ensemble=ensemble,
                     sample=sample,
                     calculate_log_probs=calculate_log_probs,
@@ -146,7 +160,7 @@ class BayesianNetworkLRT(nn.Module):
             )
 
         return self.linears[-1](
-            torch.cat((x_hidden, x_input), dim=1),
+            _next_input(x_hidden),
             ensemble=ensemble,
             sample=sample,
             calculate_log_probs=calculate_log_probs,
@@ -264,9 +278,3 @@ class BayesianNetworkLRT(nn.Module):
         with torch.no_grad():
             out = self(x, ensemble=False)
             return torch.exp(out) if self.multiclass else out
-
-
-class InputSkipLRTNetwork(BayesianNetworkLRT):
-    """Alias for the Bayesian network with input skip connections."""
-
-    pass

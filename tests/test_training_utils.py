@@ -1,9 +1,9 @@
 import torch
-from LBBNN import InputSkipLRTNetwork, train_epoch, validate
+from LBBNN import BayesianNetworkLRT, train_epoch, validate
 
 def test_train_epoch_and_validate_run():
     torch.manual_seed(0)
-    model = InputSkipLRTNetwork(dim=4, p=5, hidden_layers=2, classification=True, n_classes=1)
+    model = BayesianNetworkLRT(dim=4, p=5, hidden_layers=2, classification=True, n_classes=1)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     x = torch.randn(16, 5)
     y = (torch.rand(16) > 0.5).float()

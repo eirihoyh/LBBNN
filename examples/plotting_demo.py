@@ -1,7 +1,7 @@
 import torch
-from LBBNN import InputSkipLRTNetwork, plotting
+from LBBNN import BayesianNetworkLRT, plotting
 
-model = InputSkipLRTNetwork(dim=4, p=5, hidden_layers=2, classification=True, n_classes=1)
+model = BayesianNetworkLRT(dim=4, p=5, hidden_layers=2, classification=True, n_classes=1)
 x = torch.randn(5)
 saved = plotting.plot_local_explain_piecewise_linear_act(
     model, 

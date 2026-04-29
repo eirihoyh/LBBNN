@@ -31,6 +31,8 @@ class BayesianNetworkFlow(nn.Module):
         act_func: Callable[[Tensor], Tensor] = torch.relu,
         lower_init_alpha: float = 0.30,
         upper_init_alpha: float = 0.49,
+        input_skip: bool = True,
+        custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
         """Initialize the flow-based Bayesian network.
 
@@ -55,6 +57,12 @@ class BayesianNetworkFlow(nn.Module):
             act_func: Activation function used in hidden layers.
             lower_init_alpha: Lower bound for inclusion probability initialization.
             upper_init_alpha: Upper bound for inclusion probability initialization.
+            input_skip: If True (default) every hidden and the output layer
+                receives the original input concatenated to its activations.
+                If False the network behaves as a standard feed-forward MLP
+                with binary gates.
+            custom_loss: Either a callable used as the loss, or False to fall
+                back to the task-appropriate default (NLLLoss / BCELoss / MSELoss).
 
         Returns:
             None.
@@ -65,6 +73,7 @@ class BayesianNetworkFlow(nn.Module):
         self.classification = classification
         self.multiclass = n_classes > 1
         self.act = act_func
+        self.input_skip = input_skip
 
         layer_kwargs = dict(
             a_prior=a_prior,
@@ -79,22 +88,26 @@ class BayesianNetworkFlow(nn.Module):
             upper_init_alpha=upper_init_alpha,
         )
 
+        hidden_in = dim + p if input_skip else dim
+
         self.linears = nn.ModuleList(
             [BayesianLinearFlow(p, dim, **layer_kwargs)]
         )
 
         self.linears.extend(
             [
-                BayesianLinearFlow(dim + p, dim, **layer_kwargs)
+                BayesianLinearFlow(hidden_in, dim, **layer_kwargs)
                 for _ in range(hidden_layers - 1)
             ]
         )
 
         self.linears.append(
-            BayesianLinearFlow(dim + p, n_classes, **layer_kwargs)
+            BayesianLinearFlow(hidden_in, n_classes, **layer_kwargs)
         )
 
-        if classification and self.multiclass:
+        if custom_loss:
+            self.loss = custom_loss
+        elif classification and self.multiclass:
             self.loss = nn.NLLLoss(reduction="sum")
         elif classification:
             self.loss = nn.BCELoss(reduction="sum")
@@ -104,6 +117,7 @@ class BayesianNetworkFlow(nn.Module):
     def _forward_logits(
         self,
         x: Tensor,
+        sample: bool = False,
         ensemble: bool = True,
         post_train: bool = False,
     ) -> Tensor:
@@ -111,6 +125,8 @@ class BayesianNetworkFlow(nn.Module):
 
         Args:
             x: Input tensor.
+            sample: When in deterministic mode, whether to draw weights
+                from their flow-modulated Gaussian or use the mean.
             ensemble: Whether to use ensemble-style inference.
             post_train: Whether to use post-training thresholded inclusion.
 
@@ -123,22 +139,28 @@ class BayesianNetworkFlow(nn.Module):
             self.linears[0](
                 x_input,
                 ensemble=ensemble,
+                sample=sample,
                 post_train=post_train,
             )
         )
 
+        def _next_input(h: Tensor) -> Tensor:
+            return torch.cat((h, x_input), dim=1) if self.input_skip else h
+
         for layer in self.linears[1:-1]:
             x_hidden = self.act(
                 layer(
-                    torch.cat((x_hidden, x_input), dim=1),
+                    _next_input(x_hidden),
                     ensemble=ensemble,
+                    sample=sample,
                     post_train=post_train,
                 )
             )
 
         logits = self.linears[-1](
-            torch.cat((x_hidden, x_input), dim=1),
+            _next_input(x_hidden),
             ensemble=ensemble,
+            sample=sample,
             post_train=post_train,
         )
 
@@ -156,19 +178,21 @@ class BayesianNetworkFlow(nn.Module):
 
         Args:
             x: Input tensor.
-            sample: Unused flag kept for API compatibility.
+            sample: Whether to sample weights in deterministic mode.
             ensemble: Whether to use ensemble-style inference.
-            calculate_log_probs: Unused flag kept for API compatibility.
+            calculate_log_probs: Accepted for API compatibility with the
+                LRT network. The flow KL is always computable on demand
+                via ``kl()`` so this flag has no effect here.
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
             Network outputs as probabilities or raw values depending on the task.
         """
-        del sample
         del calculate_log_probs
 
         logits = self._forward_logits(
             x=x,
+            sample=sample,
             ensemble=ensemble,
             post_train=post_train,
         )
@@ -192,19 +216,20 @@ class BayesianNetworkFlow(nn.Module):
 
         Args:
             x: Input tensor.
-            sample: Unused flag kept for API compatibility.
+            sample: Whether to sample weights in deterministic mode.
             ensemble: Whether to use ensemble-style inference.
-            calculate_log_probs: Unused flag kept for API compatibility.
+            calculate_log_probs: Accepted for API compatibility; see
+                :meth:`forward`.
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
             Output logits before the final activation.
         """
-        del sample
         del calculate_log_probs
 
         return self._forward_logits(
             x=x,
+            sample=sample,
             ensemble=ensemble,
             post_train=post_train,
         )
@@ -256,9 +281,3 @@ class BayesianNetworkFlow(nn.Module):
         with torch.no_grad():
             out = self(x, ensemble=False)
             return torch.exp(out) if self.multiclass else out
-
-
-class InputSkipFlowNetwork(BayesianNetworkFlow):
-    """Alias for the flow-based network with input skip connections."""
-
-    pass

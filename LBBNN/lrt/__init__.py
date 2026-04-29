@@ -1,7 +1,7 @@
 from .layers import BayesianLinearLRT
-from .network import BayesianNetworkLRT, InputSkipLRTNetwork
+from .network import BayesianNetworkLRT
 
 __all__ = [
-    "BayesianLinearLRT", 
-    "BayesianNetworkLRT", 
-    "InputSkipLRTNetwork"]
+    "BayesianLinearLRT",
+    "BayesianNetworkLRT",
+]

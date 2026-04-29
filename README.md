@@ -106,14 +106,14 @@ The package is designed to be used as a Python library. After installation, the 
 
 ```python
 import torch
-from LBBNN import InputSkipLRTNetwork, create_data_unif
+from LBBNN import BayesianNetworkLRT, create_data_unif
 
 y, X = create_data_unif(n=64, classification=True, seed=1)
 
 X = torch.tensor(X, dtype=torch.float32)
 y = torch.tensor(y, dtype=torch.float32)
 
-model = InputSkipLRTNetwork(
+model = BayesianNetworkLRT(
     dim=8,
     p=X.shape[1],
     hidden_layers=2,
@@ -134,14 +134,14 @@ print(preds.shape)
 
 ```python
 import torch
-from LBBNN import InputSkipFlowNetwork, create_data_unif
+from LBBNN import BayesianNetworkFlow, create_data_unif
 
 y, X = create_data_unif(n=64, classification=True, seed=1)
 
 X = torch.tensor(X, dtype=torch.float32)
 y = torch.tensor(y, dtype=torch.float32)
 
-model = InputSkipFlowNetwork(
+model = BayesianNetworkFlow(
     dim=8,
     p=X.shape[1],
     hidden_layers=2,
