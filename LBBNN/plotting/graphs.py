@@ -35,21 +35,23 @@ def _format_node_name(
 def _build_path_graph(
     value_list: list[Any],
     all_connections: list[Any],
-    save_path: str,
+    save_path: str | None,
     label_prefix: str,
     show: bool = False,
 ) -> Any:
-    """Build and save a graph of active paths.
+    """Build a graph of active paths and optionally render it.
 
     Args:
         value_list: List of tensors or arrays containing edge values.
         all_connections: List of active connections per layer.
-        save_path: Output path for the rendered graph.
+        save_path: Output path for the rendered graph. If ``None`` no
+            file is written and the unrendered Digraph is returned.
         label_prefix: Prefix used in edge labels, e.g. ``'α'`` or ``'w'``.
-        show: Whether to open the rendered graph after saving.
+        show: Whether to open the rendered graph after saving (only
+            applies when ``save_path`` is not None).
 
     Returns:
-        The rendered Graphviz digraph object.
+        The Graphviz digraph object (rendered if ``save_path`` was given).
     """
     Digraph = get_graphviz_digraph()
     dot = Digraph("All paths")
@@ -94,8 +96,9 @@ def _build_path_graph(
     dot.format = "png"
     dot.strict = True
 
-    ensure_parent(save_path)
-    dot.render(str(save_path), view=show)
+    if save_path is not None:
+        ensure_parent(save_path)
+        dot.render(str(save_path), view=show)
 
     return dot
 
@@ -103,7 +106,7 @@ def _build_path_graph(
 def plot_whole_path_graph(
     alpha_list: list[Any],
     all_connections: list[Any],
-    save_path: str,
+    save_path: str | None = None,
     show: bool = False,
 ) -> Any:
     """Plot all active paths using alpha values as edge labels.
@@ -111,11 +114,12 @@ def plot_whole_path_graph(
     Args:
         alpha_list: List of alpha tensors or arrays per layer.
         all_connections: List of active connections per layer.
-        save_path: Output path for the rendered graph.
+        save_path: Output path for the rendered graph. If ``None`` the
+            graph is built but not written to disk.
         show: Whether to open the rendered graph after saving.
 
     Returns:
-        The rendered Graphviz digraph object.
+        The Graphviz digraph object.
     """
     return _build_path_graph(
         value_list=alpha_list,
@@ -129,7 +133,7 @@ def plot_whole_path_graph(
 def plot_whole_path_graph_weight(
     weight_list: list[Any],
     all_connections: list[Any],
-    save_path: str,
+    save_path: str | None = None,
     show: bool = False,
 ) -> Any:
     """Plot all active paths using weight values as edge labels.
@@ -137,11 +141,12 @@ def plot_whole_path_graph_weight(
     Args:
         weight_list: List of weight matrices per layer.
         all_connections: List of active connections per layer.
-        save_path: Output path for the rendered graph.
+        save_path: Output path for the rendered graph. If ``None`` the
+            graph is built but not written to disk.
         show: Whether to open the rendered graph after saving.
 
     Returns:
-        The rendered Graphviz digraph object.
+        The Graphviz digraph object.
     """
     return _build_path_graph(
         value_list=weight_list,
@@ -155,19 +160,20 @@ def plot_whole_path_graph_weight(
 def run_path_graph(
     net: BayesianNet,
     threshold: float = 0.5,
-    save_path: str = "path_graphs/all_paths_input_skip",
+    save_path: str | None = None,
     show: bool = False,
 ) -> Any:
-    """Generate and save a path graph using network alpha values.
+    """Build a path graph from the network's alpha values.
 
     Args:
         net: Trained network object.
         threshold: Threshold used to clean alpha values.
-        save_path: Output path for the rendered graph.
+        save_path: Output path for the rendered graph. If ``None`` the
+            graph is built but not written to disk.
         show: Whether to open the rendered graph after saving.
 
     Returns:
-        The rendered Graphviz digraph object.
+        The Graphviz digraph object.
     """
     alpha_list = insp.get_alphas(net)
     clean_alpha_list = insp.clean_alpha(net, threshold)
@@ -184,21 +190,22 @@ def run_path_graph(
 def run_path_graph_weight(
     net: BayesianNet,
     threshold: float = 0.5,
-    save_path: str = "path_graphs/all_paths_input_skip",
+    save_path: str | None = None,
     show: bool = False,
     flow: bool = False,
 ) -> Any:
-    """Generate and save a path graph using network weights.
+    """Build a path graph from the network's weight values.
 
     Args:
         net: Trained network object.
         threshold: Threshold used to clean alpha values.
-        save_path: Output path for the rendered graph.
+        save_path: Output path for the rendered graph. If ``None`` the
+            graph is built but not written to disk.
         show: Whether to open the rendered graph after saving.
         flow: Whether to apply flow-adjusted weights.
 
     Returns:
-        The rendered Graphviz digraph object.
+        The Graphviz digraph object.
     """
     weight_list = insp.weight_matrices_numpy(net, flow=flow)
     clean_alpha_list = insp.clean_alpha(net, threshold)
@@ -215,19 +222,21 @@ def run_path_graph_weight(
 def plot_path_individual_classes(
     net: BayesianNet,
     classes: int,
-    path: str = "individual_classes",
+    path: str | None = None,
     show: bool = False,
 ) -> list[str]:
-    """Generate and save separate path graphs for each output class.
+    """Build per-class path graphs and optionally write them to disk.
 
     Args:
         net: Trained network object.
         classes: Number of output classes.
-        path: Base directory for saved graphs.
+        path: Base directory for saved graphs. If ``None`` the graphs
+            are built but not written to disk and an empty list is
+            returned.
         show: Whether to open each rendered graph after saving.
 
     Returns:
-        A list of saved image paths.
+        A list of saved image paths (empty when ``path`` is None).
     """
     saved_paths: list[str] = []
 
@@ -241,13 +250,14 @@ def plot_path_individual_classes(
         clean_alphas = insp.clean_alpha(net, 0.5, alpha_list=alphas)
         all_connections = insp.get_active_weights(clean_alphas)
 
-        target_path = f"{path}/class{class_idx}"
+        target_path = f"{path}/class{class_idx}" if path is not None else None
         plot_whole_path_graph(
             alpha_list=alphas,
             all_connections=all_connections,
             save_path=target_path,
             show=show,
         )
-        saved_paths.append(f"{target_path}.png")
+        if target_path is not None:
+            saved_paths.append(f"{target_path}.png")
 
     return saved_paths
