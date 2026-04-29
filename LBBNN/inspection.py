@@ -7,6 +7,10 @@ from torch import Tensor
 from ._types import BayesianNet
 
 
+def _to_numpy(tensors: list[Tensor]) -> list[np.ndarray]:
+    return [t.detach().cpu().numpy() for t in tensors]
+
+
 def nr_hidden_layers(net: BayesianNet) -> int:
     """Return the number of hidden layers in the network.
 
@@ -79,7 +83,7 @@ def z_matrices_numpy(net: BayesianNet) -> list[np.ndarray]:
     Returns:
         List of `q0_mean` matrices as NumPy arrays.
     """
-    return [tensor.detach().cpu().numpy() for tensor in z_matrices(net)]
+    return _to_numpy(z_matrices(net))
 
 
 def weight_matrices_std(net: BayesianNet) -> list[Tensor]:
@@ -106,7 +110,7 @@ def weight_matrices_std_numpy(net: BayesianNet) -> list[np.ndarray]:
     Returns:
         List of weight standard deviation matrices as NumPy arrays.
     """
-    return [tensor.detach().cpu().numpy() for tensor in weight_matrices_std(net)]
+    return _to_numpy(weight_matrices_std(net))
 
 
 def get_alphas(net: BayesianNet) -> list[Tensor]:
@@ -130,7 +134,7 @@ def get_alphas_numpy(net: BayesianNet) -> list[np.ndarray]:
     Returns:
         List of alpha matrices as NumPy arrays.
     """
-    return [alpha.detach().cpu().numpy() for alpha in get_alphas(net)]
+    return _to_numpy(get_alphas(net))
 
 
 def clean_alpha(
