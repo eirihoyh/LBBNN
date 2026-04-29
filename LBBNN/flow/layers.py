@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import Sequence
 
 import torch
 import torch.nn as nn
@@ -35,10 +36,12 @@ class BayesianLinearFlow(nn.Module):
         a_prior: float = 0.1,
         sigma_prior: float = 2.0,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-0.01, 0.01),
+        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
         z_flow_type: str = "IAF",
         r_flow_type: str = "IAF",
+        iaf_h_sizes: Sequence[int] = (250, 250),
+        rnvp_h_sizes: Sequence[int] = (10, 10),
     ) -> None:
         """Initialize the flow-based Bayesian linear layer.
 
@@ -59,6 +62,11 @@ class BayesianLinearFlow(nn.Module):
                 (``"IAF"`` or ``"RNVP"``).
             r_flow_type: Transform type used for the auxiliary `r` flow
                 (``"IAF"`` or ``"RNVP"``).
+            iaf_h_sizes: Hidden layer sizes for IAF MADE networks (used
+                whenever ``z_flow_type`` or ``r_flow_type`` is ``"IAF"``).
+            rnvp_h_sizes: Hidden layer sizes for RNVP coupling networks
+                (used whenever ``z_flow_type`` or ``r_flow_type`` is
+                ``"RNVP"``).
 
         Returns:
             None.
@@ -104,8 +112,14 @@ class BayesianLinearFlow(nn.Module):
         self.r0_b1 = nn.Parameter(torch.randn(in_features))
         self.r0_b2 = nn.Parameter(torch.randn(in_features))
 
-        self.z_flow = PropagateFlow(z_flow_type, in_features, num_transforms)
-        self.r_flow = PropagateFlow(r_flow_type, in_features, num_transforms)
+        self.z_flow = PropagateFlow(
+            z_flow_type, in_features, num_transforms,
+            iaf_h_sizes=iaf_h_sizes, rnvp_h_sizes=rnvp_h_sizes,
+        )
+        self.r_flow = PropagateFlow(
+            r_flow_type, in_features, num_transforms,
+            iaf_h_sizes=iaf_h_sizes, rnvp_h_sizes=rnvp_h_sizes,
+        )
 
         self.z: Tensor | None = None
         # Cache populated by `sample_z`/`forward` so that a subsequent

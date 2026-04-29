@@ -18,6 +18,8 @@ class PropagateFlow(nn.Module):
         transform: str,
         dim: int,
         num_transforms: int,
+        iaf_h_sizes: Sequence[int] = (250, 250),
+        rnvp_h_sizes: Sequence[int] = (10, 10),
     ) -> None:
         """Initialize a stack of flow transforms.
 
@@ -26,6 +28,11 @@ class PropagateFlow(nn.Module):
                 ``"RNVP"``.
             dim: Input and output dimensionality of each transform.
             num_transforms: Number of transforms to apply in sequence.
+            iaf_h_sizes: Hidden layer sizes for IAF MADE networks.
+                Only used when ``transform == "IAF"``. Smaller values
+                make the flow much cheaper at the cost of expressivity.
+            rnvp_h_sizes: Hidden layer sizes for RNVP coupling networks.
+                Only used when ``transform == "RNVP"``.
 
         Returns:
             None.
@@ -34,11 +41,11 @@ class PropagateFlow(nn.Module):
 
         if transform == "IAF":
             self.transforms = nn.ModuleList(
-                [IAF(dim) for _ in range(num_transforms)]
+                [IAF(dim, h_sizes=iaf_h_sizes) for _ in range(num_transforms)]
             )
         elif transform == "RNVP":
             self.transforms = nn.ModuleList(
-                [RNVP(dim) for _ in range(num_transforms)]
+                [RNVP(dim, h_sizes=rnvp_h_sizes) for _ in range(num_transforms)]
             )
         else:
             raise ValueError(f"Transform not implemented: {transform}")

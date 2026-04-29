@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Sequence
 
 import torch
 import torch.nn as nn
@@ -27,6 +27,8 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         num_transforms: int = 2,
         z_flow_type: str = "IAF",
         r_flow_type: str = "IAF",
+        iaf_h_sizes: Sequence[int] = (250, 250),
+        rnvp_h_sizes: Sequence[int] = (10, 10),
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.relu,
@@ -53,6 +55,12 @@ class BayesianNetworkFlow(BayesianNetworkBase):
                 (``"IAF"`` or ``"RNVP"``).
             r_flow_type: Transform type used for the auxiliary `r` flow
                 (``"IAF"`` or ``"RNVP"``).
+            iaf_h_sizes: Hidden layer sizes for IAF MADE networks. The
+                default ``(250, 250)`` matches the historical hardcoded
+                value; smaller sizes (e.g. ``(64, 64)`` or ``(32, 32)``)
+                make training and inference much faster at the cost of
+                some flow expressivity.
+            rnvp_h_sizes: Hidden layer sizes for RNVP coupling networks.
             classification: Whether the task is classification.
             n_classes: Number of output classes.
             act_func: Activation function used in hidden layers.
@@ -85,6 +93,8 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             num_transforms=num_transforms,
             z_flow_type=z_flow_type,
             r_flow_type=r_flow_type,
+            iaf_h_sizes=iaf_h_sizes,
+            rnvp_h_sizes=rnvp_h_sizes,
             lower_init_alpha=lower_init_alpha,
             upper_init_alpha=upper_init_alpha,
         )
