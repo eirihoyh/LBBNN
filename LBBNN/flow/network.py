@@ -138,7 +138,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             x: Input tensor.
             sample: When in deterministic mode, whether to draw weights
                 from their flow-modulated Gaussian or use the mean.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
@@ -190,7 +190,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         Args:
             x: Input tensor.
             sample: Whether to sample weights in deterministic mode.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             calculate_log_probs: Accepted for API compatibility with the
                 LRT network. The flow KL is always computable on demand
                 via ``kl()`` so this flag has no effect here.
@@ -228,7 +228,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         Args:
             x: Input tensor.
             sample: Whether to sample weights in deterministic mode.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             calculate_log_probs: Accepted for API compatibility; see
                 :meth:`forward`.
             post_train: Whether to use post-training thresholded inclusion.

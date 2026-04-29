@@ -128,7 +128,7 @@ class BayesianNetworkLRT(BayesianNetworkBase):
         Args:
             x: Input tensor.
             sample: Whether to sample weights during deterministic inference.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             calculate_log_probs: Whether to update KL-related quantities.
             post_train: Whether to use post-training thresholded inclusion.
 

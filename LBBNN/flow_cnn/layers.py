@@ -211,7 +211,7 @@ class BayesianConv2dFlow(nn.Module):
 
         Args:
             input: Input tensor of shape ``(B, C_in, H, W)``.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             post_train: Whether to use thresholded inclusion probabilities.
 
         Returns:

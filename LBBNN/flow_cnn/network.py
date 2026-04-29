@@ -184,7 +184,7 @@ class BayesianNetworkCNNFlow(BayesianNetworkBase):
 
         Args:
             x: Flattened input images of shape ``(B, p)``.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             post_train: Whether to use thresholded inclusion probabilities.
 
         Returns:
@@ -230,7 +230,7 @@ class BayesianNetworkCNNFlow(BayesianNetworkBase):
         Args:
             x: Flattened input images of shape ``(B, p)``.
             sample: Unused; present for API compatibility.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             calculate_log_probs: Unused; present for API compatibility.
             post_train: Whether to use thresholded inclusion probabilities.
 
@@ -259,7 +259,7 @@ class BayesianNetworkCNNFlow(BayesianNetworkBase):
         Args:
             x: Flattened input images of shape ``(B, p)``.
             sample: Unused; present for API compatibility.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             calculate_log_probs: Unused; present for API compatibility.
             post_train: Whether to use thresholded inclusion probabilities.
 

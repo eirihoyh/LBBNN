@@ -240,7 +240,7 @@ class BayesianLinearFlow(nn.Module):
 
         Args:
             input: Input tensor of shape ``(batch_size, in_features)``.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             sample: When in deterministic mode (``ensemble=False`` and
                 not training), whether to draw weights from
                 ``N(weight_mu * zk, weight_sigma)`` or use the mean.

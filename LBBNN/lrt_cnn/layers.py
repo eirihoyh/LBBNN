@@ -101,7 +101,7 @@ class BayesianConv2dLRT(nn.Module):
 
         Args:
             input: Input tensor of shape ``(B, C_in, H, W)``.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             sample: Whether to sample weights in deterministic mode.
             calculate_log_probs: Whether to update the KL divergence term.
             post_train: Whether to use thresholded inclusion probabilities.
