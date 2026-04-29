@@ -8,9 +8,10 @@ import torch.nn.functional as F
 from torch import Tensor
 
 from .layers import BayesianLinearLRT
+from .._base import BayesianNetworkBase
 
 
-class BayesianNetworkLRT(nn.Module):
+class BayesianNetworkLRT(BayesianNetworkBase):
     """Bayesian neural network with input skip connections."""
 
     def __init__(
@@ -242,39 +243,3 @@ class BayesianNetworkLRT(nn.Module):
         """
         return sum(layer.kl for layer in self.linears)
 
-    def predict(self, x: Tensor, threshold: float = 0.5) -> Tensor:
-        """Predict classes or regression values.
-
-        Args:
-            x: Input tensor.
-            threshold: Threshold used for binary classification.
-
-        Returns:
-            Predicted class labels or regression outputs.
-        """
-        self.eval()
-
-        with torch.no_grad():
-            out = self(x, ensemble=False)
-
-            if self.classification:
-                if self.multiclass:
-                    return out.argmax(dim=1)
-                return (out >= threshold).float().view(-1)
-
-            return out.view(-1)
-
-    def predict_proba(self, x: Tensor) -> Tensor:
-        """Predict class probabilities.
-
-        Args:
-            x: Input tensor.
-
-        Returns:
-            Predicted probabilities for classification tasks.
-        """
-        self.eval()
-
-        with torch.no_grad():
-            out = self(x, ensemble=False)
-            return torch.exp(out) if self.multiclass else out
