@@ -1,6 +1,4 @@
-import json
 import math
-import csv
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +16,14 @@ from LBBNN import (
     weight_matrices,
     what_if_explanations,
 )
+from _common import (
+    set_seed,
+    save_json,
+    save_history_csv,
+    save_predictions_csv,
+    binary_accuracy,
+    split_dataset,
+)
 
 
 # ============================================================
@@ -30,7 +36,6 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 N_SAMPLES = 20000
 TRAIN_FRAC = 0.70
 VAL_FRAC = 0.15
-TEST_FRAC = 0.15
 
 DIM = 20
 HIDDEN_LAYERS = 4
@@ -39,96 +44,6 @@ EPOCHS = 100
 BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-# ============================================================
-# Utilities
-# ============================================================
-def set_seed(seed: int) -> None:
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-
-
-
-def _to_json_serializable(obj):
-    """
-    Recursively convert NumPy / PyTorch objects into JSON-serializable Python types.
-    """
-    if isinstance(obj, dict):
-        return {str(k): _to_json_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [_to_json_serializable(v) for v in obj]
-    elif isinstance(obj, tuple):
-        return [_to_json_serializable(v) for v in obj]
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, torch.Tensor):
-        if obj.ndim == 0:
-            return obj.item()
-        return obj.detach().cpu().tolist()
-    else:
-        return obj
-
-
-def save_json(obj, path: Path) -> None:
-    obj = _to_json_serializable(obj)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2)
-
-
-
-def save_history_csv(history, path: Path) -> None:
-    if not history:
-        return
-    fieldnames = list(history[0].keys())
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(history)
-
-
-def save_predictions_csv(y_true, y_prob, y_pred, path: Path) -> None:
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["y_true", "y_prob", "y_pred"])
-        for yt, yp, yh in zip(y_true, y_prob, y_pred):
-            writer.writerow([float(yt), float(yp), float(yh)])
-
-
-def binary_accuracy(y_prob: torch.Tensor, y_true: torch.Tensor, threshold: float = 0.5) -> float:
-    y_hat = (y_prob >= threshold).float()
-    return float((y_hat.view(-1) == y_true.view(-1)).float().mean().cpu())
-
-
-def split_dataset(X: torch.Tensor, y: torch.Tensor):
-    n = X.shape[0]
-    idx = torch.randperm(n)
-
-    n_train = int(TRAIN_FRAC * n)
-    n_val = int(VAL_FRAC * n)
-    n_test = n - n_train - n_val
-
-    train_idx = idx[:n_train]
-    val_idx = idx[n_train:n_train + n_val]
-    test_idx = idx[n_train + n_val:]
-
-    X_train, y_train = X[train_idx], y[train_idx]
-    X_val, y_val = X[val_idx], y[val_idx]
-    X_test, y_test = X[test_idx], y[test_idx]
-
-    train_data = torch.cat([X_train, y_train.unsqueeze(1)], dim=1)
-    val_data = torch.cat([X_val, y_val.unsqueeze(1)], dim=1)
-    test_data = torch.cat([X_test, y_test.unsqueeze(1)], dim=1)
-
-    return (X_train, y_train, train_data), (X_val, y_val, val_data), (X_test, y_test, test_data)
 
 
 # ============================================================
@@ -151,7 +66,9 @@ def main():
     X = torch.tensor(X_np, dtype=torch.float32)
     y = torch.tensor(y_np, dtype=torch.float32)
 
-    (X_train, y_train, train_data), (X_val, y_val, val_data), (X_test, y_test, test_data) = split_dataset(X, y)
+    (X_train, y_train, train_data), (X_val, y_val, val_data), (X_test, y_test, test_data) = split_dataset(
+        X, y, train_frac=TRAIN_FRAC, val_frac=VAL_FRAC
+    )
 
     train_data = train_data.to(DEVICE)
     val_data = val_data.to(DEVICE)
