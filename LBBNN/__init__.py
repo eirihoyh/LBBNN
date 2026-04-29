@@ -12,13 +12,18 @@ from .explain import (
     what_if_explanations,
 )
 from .training import train_epoch, validate, test_ensemble
-from .flow import PropagateFlow, RNVP, IAF, BayesianLinearFlow, BayesianNetworkFlow
+from .transforms import PropagateFlow, RNVP, IAF
+from .flow import BayesianLinearFlow, BayesianNetworkFlow
 from .lrt import BayesianLinearLRT, BayesianNetworkLRT
+from .lrt_cnn import BayesianConv2dLRT, BayesianNetworkCNNLRT
+from .flow_cnn import BayesianConv2dFlow, BayesianNetworkCNNFlow
 from . import plotting
 
 __all__ = [
     "BayesianLinearLRT", "BayesianNetworkLRT",
     "PropagateFlow", "RNVP", "IAF", "BayesianLinearFlow", "BayesianNetworkFlow",
+    "BayesianConv2dLRT", "BayesianNetworkCNNLRT",
+    "BayesianConv2dFlow", "BayesianNetworkCNNFlow",
     "create_data_unif", "create_bsr_data", "get_data", "nr_hidden_layers", "weight_matrices",
     "weight_matrices_numpy", "weight_matrices_std", "weight_matrices_std_numpy", "get_alphas",
     "get_alphas_numpy", "clean_alpha", "clean_alpha_class", "get_active_weights",
