@@ -92,15 +92,18 @@ def train_epoch(
     train_data = train_data[indices]
 
     multiclass = task == "multiclass"
-    last_nll: float | None = None
-    last_loss: float | None = None
+    last_nll_t: Tensor | None = None
+    last_loss_t: Tensor | None = None
 
     for start in range(0, train_data.shape[0], batch_size):
         end = start + batch_size
         batch_data = train_data[start:end]
 
-        x_batch = batch_data[:, :p].to(device)
-        y_batch = batch_data[:, -1].to(device)
+        x_batch = batch_data[:, :p]
+        y_batch = batch_data[:, -1]
+        if x_batch.device != device:
+            x_batch = x_batch.to(device)
+            y_batch = y_batch.to(device)
 
         if multiclass:
             target = y_batch.long()
@@ -119,14 +122,16 @@ def train_epoch(
         loss.backward()
         optimizer.step()
 
-        last_nll = nll.item()
-        last_loss = loss.item()
+        last_nll_t = nll.detach()
+        last_loss_t = loss.detach()
 
         if verbose:
-            print("loss", last_loss)
-            print("nll", last_nll)
+            print("loss", last_loss_t.item())
+            print("nll", last_nll_t.item())
             print("density", expected_number_of_weights(net) / nr_weights)
 
+    last_nll = None if last_nll_t is None else last_nll_t.item()
+    last_loss = None if last_loss_t is None else last_loss_t.item()
     return last_nll, last_loss
 
 

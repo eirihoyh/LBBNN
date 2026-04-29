@@ -42,11 +42,15 @@ DIM = 50
 HIDDEN_LAYERS = 2
 NUM_TRANSFORMS = 2
 LR = 1e-2
-EPOCHS = 50
-BATCH_SIZE = 256
+EPOCHS = 50*16
+BATCH_SIZE = 4096
 VAL_FRAC = 0.15
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+if torch.cuda.is_available():
+    torch.set_float32_matmul_precision("high")
+    torch.backends.cudnn.benchmark = True  # Set to False if need for full reproducible runs
 
 CLASS_NAMES = [str(i) for i in range(10)]
 
@@ -98,7 +102,8 @@ def main() -> None:
     model = BayesianNetworkFlow(
         dim=DIM, p=P, hidden_layers=HIDDEN_LAYERS,
         num_transforms=NUM_TRANSFORMS,
-        classification=True, n_classes=N_CLASSES, act_func=torch.relu,
+        classification=True, n_classes=N_CLASSES, act_func=torch.sigmoid,
+        iaf_h_sizes=(64,64),
     ).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     nr_weights = sum(param.numel() for param in weight_matrices(net=model))
