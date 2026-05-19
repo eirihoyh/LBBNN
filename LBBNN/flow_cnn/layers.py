@@ -27,7 +27,6 @@ class BayesianConv2dFlow(nn.Module):
         a_prior: float = 0.1,
         sigma_prior: float = 2.5,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
         z_flow_type: str = "IAF",
         r_flow_type: str = "IAF",
@@ -48,7 +47,6 @@ class BayesianConv2dFlow(nn.Module):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Uniform init range for weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             z_flow_type: Transform type for the variational ``z`` flow
@@ -76,8 +74,9 @@ class BayesianConv2dFlow(nn.Module):
         shape = (out_channels, in_channels, kernel[0], kernel[1])
 
         # Variational parameters for the weights.
+        std = (2/(in_channels * kernel[0] * kernel[1]))**0.5
         self.weight_mu = nn.Parameter(
-            torch.empty(shape).uniform_(*weight_mu_init_range)
+            torch.empty(shape).normal_(mean=0, std=std)
         )
         self.weight_rho = nn.Parameter(
             weight_rho_init_mean + 0.1 * torch.randn(shape)

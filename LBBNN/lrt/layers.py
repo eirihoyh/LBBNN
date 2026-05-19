@@ -28,7 +28,6 @@ class BayesianLinearLRT(nn.Module):
         a_prior: float = 0.1,
         sigma_prior: float = 2.5,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
         n_skip_features: int | None = None,
     ) -> None:
@@ -44,8 +43,6 @@ class BayesianLinearLRT(nn.Module):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Lower and upper bounds for uniform
-                initialization of the weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             n_skip_features: Number of skip-input features (the trailing
@@ -62,7 +59,9 @@ class BayesianLinearLRT(nn.Module):
 
         # Variational parameters for the weights.
         self.weight_mu = nn.Parameter(
-            torch.empty(out_features, in_features).uniform_(*weight_mu_init_range)
+            torch.empty(out_features, in_features).normal_(
+                mean=0, std=(2/in_features)**0.5
+            )
         )
         self.weight_rho = nn.Parameter(
             weight_rho_init_mean + 0.1 * torch.randn(out_features, in_features)

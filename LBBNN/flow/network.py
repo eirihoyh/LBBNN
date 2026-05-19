@@ -22,7 +22,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         a_prior: float = 0.05,
         sigma_prior: float = 2.0,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-0.01, 0.01),
         weight_rho_init_mean: float = -9.0,
         num_transforms: int = 2,
         z_flow_type: str = "IAF",
@@ -46,8 +45,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Lower and upper bounds for uniform
-                initialization of the weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             num_transforms: Number of flow transforms per layer.
@@ -88,7 +85,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             a_prior=a_prior,
             sigma_prior=sigma_prior,
             mu_prior=mu_prior,
-            weight_mu_init_range=weight_mu_init_range,
             weight_rho_init_mean=weight_rho_init_mean,
             num_transforms=num_transforms,
             z_flow_type=z_flow_type,

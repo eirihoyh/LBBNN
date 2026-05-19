@@ -38,15 +38,14 @@ class BayesianNetworkCNNLRT(BayesianNetworkBase):
         a_prior: float = 0.05,
         sigma_prior: float = 2.5,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
         classification: bool = True,
         n_classes: int = 1,
         act_func: Callable[[Tensor], Tensor] = torch.relu,
-        lower_init_alpha: float = 0.30,
-        upper_init_alpha: float = 0.49,
+        lower_init_alpha: float = 0.90,
+        upper_init_alpha: float = 0.99,
         high_init_covariate_prob: bool = False,
-        input_skip: bool = True,
+        input_skip: bool = False,
         custom_loss: bool | Callable[[Tensor, Tensor], Tensor] = False,
     ) -> None:
         """Initialize the Bayesian CNN.
@@ -64,7 +63,6 @@ class BayesianNetworkCNNLRT(BayesianNetworkBase):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Uniform init range for weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             classification: Whether the task is classification.
@@ -101,7 +99,6 @@ class BayesianNetworkCNNLRT(BayesianNetworkBase):
             a_prior=a_prior,
             sigma_prior=sigma_prior,
             mu_prior=mu_prior,
-            weight_mu_init_range=weight_mu_init_range,
             weight_rho_init_mean=weight_rho_init_mean,
             lower_init_alpha=lower_init_alpha,
             upper_init_alpha=upper_init_alpha,
@@ -111,7 +108,6 @@ class BayesianNetworkCNNLRT(BayesianNetworkBase):
             a_prior=a_prior,
             sigma_prior=sigma_prior,
             mu_prior=mu_prior,
-            weight_mu_init_range=weight_mu_init_range,
             weight_rho_init_mean=weight_rho_init_mean,
             lower_init_alpha=lower_init_alpha,
             upper_init_alpha=upper_init_alpha,
