@@ -46,14 +46,14 @@ IN_CHANNELS = 3
 IMG_H, IMG_W = 32, 32
 P = IN_CHANNELS * IMG_H * IMG_W   # 3072 (no bias column for CNN)
 
-OUT_CHANNELS = [32, 64, 128]
+OUT_CHANNELS = [64,64,128]
 KERNEL_SIZE = 3
 STRIDE = 2
 PADDING = 1
 
 DIM = 256
-HIDDEN_LAYERS = 1
-LR = 1e-3
+HIDDEN_LAYERS = 2
+LR = 1e-2
 EPOCHS = 100
 BATCH_SIZE = 256
 VAL_FRAC = 0.15
@@ -118,7 +118,7 @@ def main() -> None:
         hidden_layers=HIDDEN_LAYERS,
         classification=True,
         n_classes=N_CLASSES,
-        act_func=torch.relu,
+        act_func=torch.nn.functional.leaky_relu,
     ).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     nr_weights = (
