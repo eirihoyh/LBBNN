@@ -41,6 +41,12 @@ The repository currently includes implementations of the following model familie
   - Latent binary Bayesian neural networks (LBBNNs) whose weight modeling incorporates normalizing-flow components,
   - again with input skip-connections, allowing more flexible posterior structure.
 
+- **LRT-CNN**
+  - Convolutional variant of the LRT-based LBBNN
+
+- **FLOW-CNN**
+  - Convolutional variant of the FLOW-based LBBNN
+
 In addition, the package contains utilities for:
 
 - generating synthetic data for experimentation,
@@ -160,6 +166,75 @@ print(model.kl())
 
 ---
 
+### Example: LRT-based CNN
+
+```python
+import torch
+from LBBNN import BayesianNetworkCNNLRT
+
+# 1-channel 8x8 images, flattened to (N, 64)
+X = torch.randn(32, 64)
+
+model = BayesianNetworkCNNLRT(
+    init_in_channels=1,
+    out_channel_list=[8, 16],
+    kernel_size=3,
+    stride=1,
+    padding=1,
+    p1=8,
+    p2=8,
+    dim=32,
+    hidden_layers=1,
+    classification=True,
+    n_classes=1,
+    act_func=torch.relu,
+)
+
+with torch.no_grad():
+    preds = model(X, ensemble=False)
+
+print(preds.shape)   # torch.Size([32, 1])
+
+model.train()
+_ = model(X, ensemble=True)
+print(model.kl())
+```
+
+---
+
+### Example: FLOW-based CNN
+
+```python
+import torch
+from LBBNN import BayesianNetworkCNNFlow
+
+X = torch.randn(32, 64)
+
+model = BayesianNetworkCNNFlow(
+    init_in_channels=1,
+    out_channel_list=[8, 16],
+    kernel_size=3,
+    stride=1,
+    padding=1,
+    p1=8,
+    p2=8,
+    dim=32,
+    hidden_layers=1,
+    num_transforms=2,
+    classification=True,
+    n_classes=1,
+    act_func=torch.relu,
+)
+
+with torch.no_grad():
+    preds = model(X, ensemble=False)
+
+print(preds.shape)   # torch.Size([32, 1])
+print(model.kl())
+```
+
+---
+
 ## Global structure and local explanation
 
 One of the main motivations for the repository is not only to train sparse Bayesian networks, but also to inspect and interpret their learned structure.
@@ -209,16 +284,22 @@ Typical examples include:
 
 - basic usage of the **LRT-based** network,
 - basic usage of the **FLOW-based** network,
+- basic usage of the **LRT-CNN** and **FLOW-CNN** networks,
 - and usage of the plotting / explanation utilities.
 
 Example commands:
 
 ```bash
-python examples/basic_usage.py
+python examples/lrt_usage.py
 python examples/flow_usage.py
+python examples/cnn_usage.py
 python examples/plotting_demo.py
-python examples/run_flow_experiment.py
-python examples/run_lrt_experiment.py
+python examples/linear_examples/run_flow_experiment.py
+python examples/linear_examples/run_lrt_experiment.py
+python examples/image_examples/run_flow_mnist.py
+python examples/image_examples/run_lrt_mnist.py
+python examples/image_cnn_examples/run_flow_cnn_mnist.py
+python examples/image_cnn_examples/run_lrt_cnn_mnist.py
 ```
 
 These scripts may serve as a useful starting point for custom experiments, benchmark studies, or exploratory analyses.
@@ -237,18 +318,24 @@ LBBNN/
 ├── examples/
 │   ├── basic_usage.py
 │   ├── flow_usage.py
+│   ├── cnn_usage.py
 │   └── plotting_demo.py
 │   └── run_flow_experiment.py
 │   └── run_lrt_experiment.py
 ├── tests/
 │   ├── test_data.py
-│   ├── test_model_forward.py
-│   ├── test_training_utils.py
-│   ├── test_flow_forward.py
-│   ├── test_flow_kl_and_compat.py
+│   ├── test_lrt.py
+│   ├── test_flow.py
+│   ├── test_flow_transforms.py
+│   ├── test_lrt_cnn.py
+│   ├── test_flow_cnn.py
+│   ├── test_training.py
+│   ├── test_inspection.py
+│   ├── test_explain.py
 │   └── test_plotting.py
 └── LBBNN/
         ├── __init__.py
+        ├── transforms.py
         ├── data.py
         ├── inspection.py
         ├── explain.py
@@ -256,10 +343,17 @@ LBBNN/
         ├── lrt/
         │   ├── __init__.py
         │   ├── layers.py
-        │   ├── network.py
+        │   └── network.py
+        ├── lrt_cnn/
+        │   ├── __init__.py
+        │   ├── layers.py
+        │   └── network.py
         ├── flow/
         │   ├── __init__.py
-        │   ├── transforms.py
+        │   ├── layers.py
+        │   └── network.py
+        ├── flow_cnn/
+        │   ├── __init__.py
         │   ├── layers.py
         │   └── network.py
         └── plotting/
@@ -289,8 +383,21 @@ LBBNN/
 - `LBBNN.flow.layers`  
   FLOW-based Bayesian linear layers.
 
-- `LBBNN.flow.transforms`  
-  Normalizing-flow components used in the FLOW-based network.
+- `LBBNN.lrt_cnn.network`  
+  LRT-based Bayesian CNN with Bayesian convolutional layers and input skip-connections.
+
+- `LBBNN.lrt_cnn.layers`  
+  LRT-based Bayesian 2-D convolutional layer (`BayesianConv2dLRT`).
+
+- `LBBNN.flow_cnn.network`  
+  FLOW-based Bayesian CNN with flow-based convolutional layers and input skip-connections.
+
+- `LBBNN.flow_cnn.layers`  
+  FLOW-based Bayesian 2-D convolutional layer (`BayesianConv2dFlow`).
+
+- `LBBNN.transforms`  
+  Normalizing-flow components shared by the FLOW-based feed-forward and CNN models
+  (`PropagateFlow`, `IAF`, `RNVP`, `MADE`).
 
 ---
 
