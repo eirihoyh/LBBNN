@@ -22,7 +22,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         a_prior: float = 0.05,
         sigma_prior: float = 2.0,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-0.01, 0.01),
         weight_rho_init_mean: float = -9.0,
         num_transforms: int = 2,
         z_flow_type: str = "IAF",
@@ -46,8 +45,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Lower and upper bounds for uniform
-                initialization of the weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             num_transforms: Number of flow transforms per layer.
@@ -88,7 +85,6 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             a_prior=a_prior,
             sigma_prior=sigma_prior,
             mu_prior=mu_prior,
-            weight_mu_init_range=weight_mu_init_range,
             weight_rho_init_mean=weight_rho_init_mean,
             num_transforms=num_transforms,
             z_flow_type=z_flow_type,
@@ -138,7 +134,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
             x: Input tensor.
             sample: When in deterministic mode, whether to draw weights
                 from their flow-modulated Gaussian or use the mean.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             post_train: Whether to use post-training thresholded inclusion.
 
         Returns:
@@ -190,7 +186,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         Args:
             x: Input tensor.
             sample: Whether to sample weights in deterministic mode.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             calculate_log_probs: Accepted for API compatibility with the
                 LRT network. The flow KL is always computable on demand
                 via ``kl()`` so this flag has no effect here.
@@ -228,7 +224,7 @@ class BayesianNetworkFlow(BayesianNetworkBase):
         Args:
             x: Input tensor.
             sample: Whether to sample weights in deterministic mode.
-            ensemble: Whether to use ensemble-style inference.
+            ensemble: Whether to use median probability model.
             calculate_log_probs: Accepted for API compatibility; see
                 :meth:`forward`.
             post_train: Whether to use post-training thresholded inclusion.

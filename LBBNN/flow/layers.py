@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from .transforms import PropagateFlow
+from ..transforms import PropagateFlow
 
 
 def _log_pi(device: torch.device, dtype: torch.dtype) -> Tensor:
@@ -36,7 +36,6 @@ class BayesianLinearFlow(nn.Module):
         a_prior: float = 0.1,
         sigma_prior: float = 2.0,
         mu_prior: float = 0.0,
-        weight_mu_init_range: tuple[float, float] = (-1.2, 1.2),
         weight_rho_init_mean: float = -9.0,
         z_flow_type: str = "IAF",
         r_flow_type: str = "IAF",
@@ -54,8 +53,6 @@ class BayesianLinearFlow(nn.Module):
             a_prior: Prior inclusion probability.
             sigma_prior: Prior standard deviation for the weights.
             mu_prior: Prior mean for the weights.
-            weight_mu_init_range: Lower and upper bounds for uniform
-                initialization of the weight means.
             weight_rho_init_mean: Mean of the Gaussian used to initialize
                 the rho-parameter (softplus-mapped to weight std).
             z_flow_type: Transform type used for the variational `z` flow
@@ -76,9 +73,11 @@ class BayesianLinearFlow(nn.Module):
         lower_init_lambda = math.log(lower_init_alpha/ (1-lower_init_alpha))
         upper_init_lambda = math.log(upper_init_alpha/ (1-upper_init_alpha))
 
-        # mean, std and incusion prob paramters
+        # Variational parameters for the weights.
         self.weight_mu = nn.Parameter(
-            torch.empty(out_features, in_features).uniform_(*weight_mu_init_range)
+            torch.empty(out_features, in_features).normal_(
+                mean=0, std=(2/in_features)**0.5
+            )
         )
         self.weight_rho = nn.Parameter(
             weight_rho_init_mean + 0.1 * torch.randn(out_features, in_features)
@@ -240,7 +239,7 @@ class BayesianLinearFlow(nn.Module):
 
         Args:
             input: Input tensor of shape ``(batch_size, in_features)``.
-            ensemble: Whether to use the local reparameterization form.
+            ensemble: Whether to use the median probability model.
             sample: When in deterministic mode (``ensemble=False`` and
                 not training), whether to draw weights from
                 ``N(weight_mu * zk, weight_sigma)`` or use the mean.
