@@ -57,10 +57,10 @@ def main():
     # 1. Data
     # --------------------------------------------------------
     
-    X_train_original = np.loadtxt("data/X_train.txt", delimiter=",")
-    X_test_original = np.loadtxt("data/X_test.txt", delimiter=",")
-    y_train_original = np.loadtxt("data/Y_train.txt", delimiter=",")
-    y_test_original = np.loadtxt("data/Y_test.txt", delimiter=",")
+    X_train_original = np.loadtxt("dataset/X_train.txt", delimiter=",")
+    X_test_original = np.loadtxt("dataset/X_test.txt", delimiter=",")
+    y_train_original = np.loadtxt("dataset/Y_train.txt", delimiter=",")
+    y_test_original = np.loadtxt("dataset/Y_test.txt", delimiter=",")
 
     # Include bias/intercept column into data
     X_train_original = np.column_stack((np.ones(len(X_train_original)),X_train_original))
