@@ -64,6 +64,33 @@ def binary_accuracy(
     y_hat = (y_prob >= threshold).float()
     return float((y_hat.view(-1) == y_true.view(-1)).float().mean().cpu())
 
+def regression_metrics(
+    y_pred: Tensor, y_true: Tensor
+) -> tuple[float, float, float]:
+    """Compute R², Pearson correlation, and MSE for regression predictions.
+
+    Args:
+        y_pred: Predicted values tensor.
+        y_true: Ground truth values tensor.
+
+    Returns:
+        A tuple containing:
+            - R² (coefficient of determination).
+            - Pearson correlation coefficient.
+            - Mean squared error.
+    """
+    y_pred = y_pred.view(-1).float().cpu()
+    y_true = y_true.view(-1).float().cpu()
+
+    ss_res = ((y_true - y_pred) ** 2).sum()
+    ss_tot = ((y_true - y_true.mean()) ** 2).sum()
+    r2 = float(1 - ss_res / ss_tot)
+
+    correlation = float(torch.corrcoef(torch.stack([y_pred, y_true]))[0, 1])
+
+    mse = float(((y_pred - y_true) ** 2).mean())
+
+    return r2, correlation, mse
 
 def split_dataset(
     X: Tensor,

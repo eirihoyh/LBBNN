@@ -389,7 +389,7 @@ def plot_global_explain_piecewise_linear_act(
             # Overlay quartile lines manually with offset towards center
             for i, covariate in enumerate(selected_cols):
                 for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
-                    subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
+                    subset = dfm[dfm["covariates"] == covariate]["β-value"]
                     q05, q50, q95 = np.percentile(subset, [5, 50, 95])
                     ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
                     ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
@@ -442,6 +442,7 @@ def plot_global_explain_piecewise_linear_act(
 
         ax.set_xlabel("covariates")
         ax.set_ylabel("β-value")
+        plt.xticks(rotation=90)
         plt.tight_layout()
 
         if save_path is not None:
