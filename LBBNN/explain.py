@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 from numpy.typing import NDArray
+from typing import Literal
 from torch import Tensor
 
 from ._types import BayesianNet
@@ -139,3 +140,88 @@ def what_if_explanations(
         predictions[i, :] = prediction_value
 
     return observed_space, contributions, predictions
+
+
+def compute_global_explain_piecewise_linear_act(
+    net: BayesianNet,
+    X: np.ndarray,
+    n_expl_per_sample: int = 10,
+    n_classes: int = 1,
+    task: Literal["binary", "multiclass", "regression"] = "binary",
+    pred_threshold: float = 0.5,
+    include_potential_contribution: bool = False,
+) -> tuple[NDArray[np.float64], NDArray]:
+    """Compute gradient-based local explanations across an entire dataset.
+
+    For each sample in ``X``, draws ``n_expl_per_sample`` gradient-based
+    local explanations and aggregates them, giving a global view of
+    covariate contributions across the dataset.
+
+    Args:
+        net: Trained Bayesian network object.
+        X: Input data array of shape ``(n_samples, n_features)``.
+        n_expl_per_sample: Number of explanation samples drawn per
+            data point.
+        n_classes: Number of output classes. Ignored when
+            ``task="regression"``.
+        task: Type of prediction task. One of ``"binary"``,
+            ``"multiclass"``, or ``"regression"``. Determines how
+            predictions are summarised:
+            - ``"binary"``: applies ``pred_threshold`` to the mean
+              output to produce a 0/1 label.
+            - ``"multiclass"``: takes the argmax over mean class
+              probabilities.
+            - ``"regression"``: returns the raw mean predicted value.
+        pred_threshold: Decision threshold for binary classification.
+            Ignored when ``task`` is not ``"binary"``.
+        include_potential_contribution: Whether to include potential
+            contributions for zero-valued inputs.
+
+    Returns:
+        A tuple containing:
+            - Contributions array of shape
+              ``(n_samples * n_expl_per_sample, n_features, n_classes)``.
+            - For ``"binary"`` and ``"multiclass"``: predicted class
+              indices of shape ``(n_samples * n_expl_per_sample,)``
+              as ``np.int64``.
+            - For ``"regression"``: mean predicted values of shape
+              ``(n_samples * n_expl_per_sample,)`` as ``np.float64``.
+    """
+    n_samples = len(X)
+    n_features = X.shape[1]
+    if isinstance(X, torch.Tensor):
+        data = X.clone().detach().to(dtype=torch.float32)
+    else:
+        data = torch.tensor(X, dtype=torch.float32)
+
+    contributions = np.zeros((n_samples, n_expl_per_sample, n_features, n_classes))
+    predictions = np.zeros((n_samples, n_classes))
+
+    for ind, d in enumerate(data):
+        expl_values, preds, _ = local_explain_piecewise_linear_act(
+            net,
+            d,
+            n_samples=n_expl_per_sample,
+            n_classes=n_classes,
+            include_potential_contribution=include_potential_contribution,
+        )
+        for c in range(n_classes):
+            contributions[ind, :, :, c] = expl_values[:, :, c]
+
+        predictions[ind] = preds.detach().cpu().numpy().mean(axis=0)
+
+    if task == "binary":
+        summarised_predictions = np.repeat(
+            (predictions[:, 0] > pred_threshold).astype(int), n_expl_per_sample
+        )
+    elif task == "multiclass":
+        summarised_predictions = np.repeat(
+            predictions.argmax(axis=1), n_expl_per_sample
+        )
+    else:  # regression
+        summarised_predictions = np.repeat(predictions[:, 0], n_expl_per_sample)
+
+    return (
+        contributions.reshape(n_samples * n_expl_per_sample, n_features, n_classes),
+        summarised_predictions,
+    )

@@ -10,6 +10,7 @@ from .inspection import (
 from .explain import (
     local_explain_piecewise_linear_act,
     what_if_explanations,
+    compute_global_explain_piecewise_linear_act,
 )
 from .training import train_epoch, validate, test_ensemble
 from .transforms import PropagateFlow, RNVP, IAF
@@ -30,6 +31,6 @@ __all__ = [
     "network_density_reduction", "create_layer_name_list", "input_inclusion_prob",
     "expected_number_of_weights", "include_input_from_layer", "average_path_length", "prob_width",
     "get_weight_and_bias_std", "get_weight_and_bias",
-    "local_explain_piecewise_linear_act", "what_if_explanations",
+    "local_explain_piecewise_linear_act", "what_if_explanations", "compute_global_explain_piecewise_linear_act",
     "train_epoch", "validate", "test_ensemble", "plotting",
 ]

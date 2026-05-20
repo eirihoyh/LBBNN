@@ -5,8 +5,10 @@ from typing import Any, Sequence
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 from numpy.typing import NDArray
+from typing import Literal
 from torch import Tensor
 import itertools
 
@@ -288,3 +290,173 @@ def plot_what_if_explanations(
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path, bbox_inches="tight")
     plt.show()
+
+
+def plot_global_explain_piecewise_linear_act(
+    contributions: NDArray[np.float64],
+    predictions: NDArray,
+    n_classes: int = 1,
+    task: Literal["binary", "multiclass", "regression"] = "binary",
+    variable_names: Sequence[Any] | None = None,
+    class_names: Sequence[Any] | None = None,
+    covariate_indices: Sequence[int] | None = None,
+    fig_size: tuple[float, float] = (10, 4),
+    violin_width: float = 1.0,
+    save_path: str | None = None,
+    show: bool = False,
+) -> list[str]:
+    """Plot violin-based global explanations for piecewise linear activations.
+
+    For binary classification, a single violin plot is produced with
+    predicted class as the hue. For multi-class problems, one violin plot
+    is produced per class. For regression, a single violin plot without
+    class-based hue splitting is produced, with the mean predicted value
+    annotated in the title.
+
+    Args:
+        contributions: Contributions array of shape
+            ``(n_samples * n_expl_per_sample, n_features, n_classes)``,
+            as returned by ``compute_global_explain_piecewise_linear_act``.
+        predictions: For classification tasks, predicted class
+            indices of shape ``(n_samples * n_expl_per_sample,)``. For
+            regression, mean predicted values of the same shape. Both
+            are returned by ``compute_global_explain_piecewise_linear_act``.
+        n_classes: Number of output classes. Ignored for regression.
+        task: Type of prediction task. One of ``"binary"``,
+            ``"multiclass"``, or ``"regression"``. Must match the value
+            used in ``compute_global_explain_piecewise_linear_act``.
+        variable_names: Optional names for the input features. Defaults
+            to ``["x0", "x1", ...]``.
+        class_names: Optional names for the output classes. Used in plot
+            titles and legend labels. Ignored for regression.
+        covariate_indices: Indices of the feature columns to include in
+            the violin plot. Defaults to all features.
+        fig_size: Figure size passed to matplotlib.
+        violin_width: Width of the violin plots. Increase beyond the
+            default of ``1.5`` for wider violins when fewer covariates
+            are displayed, or reduce it when many covariates are shown.
+        save_path: Optional file prefix for saving plots. When
+            ``task="multiclass"`` a class index suffix is appended before
+            the extension.
+        show: Whether to display the plots interactively.
+
+    Returns:
+        A list of saved plot file paths.
+    """
+    plt, _, _ = get_matplotlib()
+    import seaborn as sns
+
+    n_features = contributions.shape[1]
+
+    if variable_names is None:
+        variable_names_list = [f"x{i}" for i in range(n_features)]
+    else:
+        variable_names_list = list(variable_names)
+
+    if class_names is None:
+        class_names_list = [f"Class {i}" for i in range(max(n_classes, 2))]
+    else:
+        class_names_list = list(class_names)
+
+    if covariate_indices is None:
+        covariate_indices = list(range(n_features))
+
+    selected_cols = [variable_names_list[i] for i in covariate_indices]
+    saved_paths: list[str] = []
+    n_plots = 1 if task in ("binary", "regression") else n_classes
+
+    for class_idx in range(n_plots):
+        df = pd.DataFrame(
+            contributions[:, :, class_idx],
+            columns=variable_names_list,
+        )
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(111)
+        sns.set(style="whitegrid")
+
+        if task == "regression":
+            dfm = df[selected_cols].melt(var_name="covariates", value_name="β-value")
+            sns.violinplot(
+                data=dfm,
+                x="covariates",
+                y="β-value",
+                cut=0,
+                width=violin_width,
+                inner=None,
+                ax=ax,
+            )
+            # Overlay quartile lines manually with offset towards center
+            for i, covariate in enumerate(selected_cols):
+                for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
+                    subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
+                    q05, q50, q95 = np.percentile(subset, [5, 50, 95])
+                    ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
+                    ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+            mean_pred = predictions.mean()
+            ax.set_title(
+                f"Global covariate contributions to model prediction "
+                f"(mean predicted value: {mean_pred:.3f})"
+            )
+        else:
+            if task == "binary":
+                df["predictions"] = predictions
+                hue_label = "Predicted class"
+            else:
+                df["predictions"] = (predictions == class_idx).astype(int)
+                hue_label = f"Predicted as {class_names_list[class_idx]}"
+
+            dfm = df[selected_cols + ["predictions"]].melt(
+                "predictions",
+                var_name="covariates",
+                value_name="β-value",
+            )
+            sns.violinplot(
+                data=dfm,
+                x="covariates",
+                y="β-value",
+                hue="predictions",
+                split=True,
+                gap=0.1,
+                cut=0,
+                width=violin_width,
+                inner=None,
+                ax=ax,
+            )
+
+            # Overlay quartile lines manually with offset towards center
+            for i, covariate in enumerate(selected_cols):
+                for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
+                    subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
+                    q05, q50, q95 = np.percentile(subset, [5, 50, 95])
+                    ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
+                    ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+
+            handles, _ = ax.get_legend_handles_labels()
+            ax.legend(handles, class_names_list[:2], title=hue_label)
+            ax.set_title(
+                f"Global covariate contributions — {class_names_list[class_idx]}"
+                if task == "multiclass"
+                else "Global covariate contributions to model prediction"
+            )
+
+        ax.set_xlabel("covariates")
+        ax.set_ylabel("β-value")
+        plt.tight_layout()
+
+        if save_path is not None:
+            out_path = (
+                f"{save_path}{class_idx}.png"
+                if task == "multiclass"
+                else f"{save_path}.png"
+            )
+            ensure_parent(out_path)
+            fig.savefig(out_path, bbox_inches="tight")
+            saved_paths.append(out_path)
+
+        if show:
+            plt.show()
+
+        plt.close(fig)
+
+    return saved_paths
