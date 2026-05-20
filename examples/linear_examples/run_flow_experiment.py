@@ -19,6 +19,7 @@ from LBBNN import (
     local_explain_piecewise_linear_act,
     weight_matrices,
     what_if_explanations,
+    compute_global_explain_piecewise_linear_act,
 )
 from _common import (
     set_seed,
@@ -308,6 +309,30 @@ def main():
         feature_names=feature_names,
         feature_in_focus=2,
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
+    )
+    
+    n = 2000
+    # Generate unique random indices
+    indices = torch.randperm(len(X_test))[:n]
+    # Select samples
+    test_samples = X_test[indices]
+    contributions, predicted_classes = compute_global_explain_piecewise_linear_act(
+        net=model,
+        X=test_samples,
+        n_expl_per_sample=10,
+        n_classes=1,
+        pred_threshold=0.5,
+    )
+
+    plotting.plot_global_explain_piecewise_linear_act(
+        contributions=contributions,
+        predictions=predicted_classes,
+        n_classes=1,
+        variable_names=feature_names,
+        covariate_indices=[1,2],
+        class_names=["Class 0", "Class 1"],
+        save_path=str(RESULTS_DIR / "global_explain"),
+        show=True,
     )
 
     print(f"[FLOW] Saved all results to: {RESULTS_DIR.resolve()}")
