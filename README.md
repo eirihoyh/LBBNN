@@ -1,6 +1,6 @@
 # LBBNN
 
-Python package for **Bayesian neural networks with latent binary structure**, including both **LRT-based** and **FLOW-based** formulations with **input skip-connections**.
+Python package for **latent binary Bayesian neural networks (LBBNN)**, including both **LRT-based** and **FLOW-based** implementations with **input skip-connections**.
 
 This repository provides implementations, utilities, and example scripts for experimenting with sparse Bayesian neural architectures designed to support both **predictive performance** and **structural interpretability**. In addition to the core models, the package includes tools for:
 
@@ -10,7 +10,7 @@ This repository provides implementations, utilities, and example scripts for exp
 - local explanation,
 - and visualization of learned sparse architectures.
 
-It is also an R-package version of LBBNN, which can be found [here](https://github.com/LarsELund/LBBNN).
+There is also an R-package version of LBBNN, which can be found [here](https://github.com/LarsELund/LBBNN).
 
 ---
 
@@ -52,7 +52,8 @@ In addition, the package contains utilities for:
 - generating synthetic data for experimentation,
 - training and validating models,
 - extracting and saving global structural summaries,
-- generating local explanations for individual observations,
+- generating local contribution plots for individual observations,
+- generating global explanations based on local contributions,
 - and visualizing learned sparse networks.
 
 ---
@@ -85,7 +86,7 @@ From the repository root, install the package in editable mode:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev,plot]"
+python -m pip install -e ".[dev,plot,images]"
 ```
 
 This is the recommended setup for development and experimentation, since changes made to the source code are immediately reflected without reinstalling the package.
@@ -319,9 +320,30 @@ LBBNN/
 │   ├── basic_usage.py
 │   ├── flow_usage.py
 │   ├── cnn_usage.py
-│   └── plotting_demo.py
-│   └── run_flow_experiment.py
-│   └── run_lrt_experiment.py
+│   ├── plotting_demo.py
+|   ├── abalone/
+|   |   ├── run_flow_experiment.py
+│   |   └── run_lrt_experiment.py
+|   ├── image_cnn_examples/
+|   |   ├── run_flow_cnn_cifar10.py
+|   |   ├── run_flow_cnn_fmnist.py
+|   |   ├── run_flow_cnn_mnist.py
+|   |   ├── run_lrt_cnn_cifar10.py
+|   |   ├── run_lrt_cnn_fmnist.py
+│   |   └── run_lrt_cnn_mnist.py
+|   ├── image_examples/
+|   |   ├── run_flow_cifar10.py
+|   |   ├── run_flow_fmnist.py
+|   |   ├── run_flow_mnist.py
+|   |   ├── run_lrt_cifar10.py
+|   |   ├── run_lrt_fmnist.py
+│   |   └── run_lrt_mnist.py
+|   ├── wbc/
+|   |   ├── run_flow_experiment.py
+│   |   └── run_lrt_experiment.py
+|   └── mice_protein_dataset/
+|       ├── run_flow_experiment.py
+│       └── run_lrt_experiment.py
 ├── tests/
 │   ├── test_data.py
 │   ├── test_lrt.py
