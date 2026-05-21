@@ -192,7 +192,7 @@ def compute_global_explain_piecewise_linear_act(
     if isinstance(X, torch.Tensor):
         data = X.clone().detach().to(dtype=torch.float32)
     else:
-        data = torch.tensor(X, dtype=torch.float32)
+        data = torch.tensor(X, dtype=torch.float32).to(next(net.parameters()).device)
 
     contributions = np.zeros((n_samples, n_expl_per_sample, n_features, n_classes))
     predictions = np.zeros((n_samples, n_classes))
