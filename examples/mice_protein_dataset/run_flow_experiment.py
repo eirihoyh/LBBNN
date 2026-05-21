@@ -66,7 +66,7 @@ def main():
     # Include bias/intercept column into data
     X_train_original = np.column_stack((np.ones(len(X_train_original)),X_train_original))
     X_test_original = np.column_stack((np.ones(len(X_test_original)),X_test_original))
-    
+
     X = torch.tensor(X_train_original, dtype=torch.float32)
     y = torch.tensor(y_train_original, dtype=torch.float32)
     X_test = torch.tensor(X_test_original, dtype=torch.float32)
@@ -98,6 +98,8 @@ def main():
         classification=True,
         n_classes=n_classes,
         act_func=torch.relu,
+        lower_init_alpha=0.60,
+        upper_init_alpha=0.75,
     ).to(DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
@@ -132,7 +134,7 @@ def main():
         )
 
         print(
-            f"[FLOW] Epoch {epoch:03d} | "
+            f"[FLOW] Epoch {epoch:04d} | "
             f"kl_model={model.kl():.4f} | "
             f"train_nll={train_loss:.4f} "
         )
@@ -141,8 +143,11 @@ def main():
     # 4. Final test evaluation
     # --------------------------------------------------------
     model.eval()
+    outputs = torch.zeros(1000, X_test.shape[0], n_classes).to(DEVICE)
     with torch.no_grad():
-        test_prob = model(X_test, ensemble=False)
+        for i in range(1000):
+            outputs[i] = model(X_test, ensemble=False, sample=True)
+        test_prob = outputs.mean(0)
         test_acc = multiclass_accuracy(test_prob, y_test)
 
     print(f"[FLOW] Test accuracy: {test_acc:.4f}")
@@ -211,7 +216,7 @@ def main():
             show=False,
             flow=True
         )
-        
+
         plotting.plot_path_individual_classes(
             model,
             classes=n_classes,
@@ -267,8 +272,6 @@ def main():
         save_path=str(RESULTS_DIR / "local_explanation_plot"),
         show=False,
     )
-
-    feature_names = ['Bias', 'x_1', 'x_2']
     
     minimum, maximum = X_test.detach().cpu().numpy().min(), X_test.detach().cpu().numpy().max()
 
@@ -277,6 +280,8 @@ def main():
         x_explain.detach(), 
         minimum=minimum,
         maximum=maximum,
+        task="multiclass",
+        n_classes=n_classes,
         feature_index=1,
         n_samples=50,
         n_expl_per_sample=100)
@@ -286,7 +291,8 @@ def main():
         contributions_feature_1,
         predictions_feature_1,
         x_explain.detach().cpu().numpy(),
-        feature_names=feature_names,
+        task="multiclass",
+        n_classes=n_classes,
         feature_in_focus=1,
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_1")
     )
@@ -296,6 +302,8 @@ def main():
         x_explain.detach(), 
         minimum=minimum,
         maximum=maximum,
+        task="multiclass",
+        n_classes=n_classes,
         feature_index=2,
         n_samples=50,
         n_expl_per_sample=100)
@@ -305,7 +313,8 @@ def main():
         contributions_feature_2,
         predictions_feature_2,
         x_explain.detach().cpu().numpy(),
-        feature_names=feature_names,
+        task="multiclass",
+        n_classes=n_classes,
         feature_in_focus=2,
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
     )
@@ -323,6 +332,7 @@ def main():
         contributions=contributions,
         predictions=predicted_classes,
         task="multiclass",
+        split=False,
         n_classes=n_classes,
         class_names=class_names,
         save_path=str(RESULTS_DIR / "global_explain"),
