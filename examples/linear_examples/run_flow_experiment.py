@@ -64,7 +64,7 @@ def main():
     _, y_np, X_np = get_data(
         n=N_SAMPLES,
         classification=True,
-        non_lin=True,
+        non_lin=False,
         seed=SEED,
     )
     X = torch.tensor(X_np, dtype=torch.float32)
