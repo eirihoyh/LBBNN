@@ -37,11 +37,11 @@ SEED = 42
 RESULTS_DIR = Path("results/lrt_run")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-DIM = 20
+DIM = 200
 HIDDEN_LAYERS = 2
 NUM_TRANSFORMS = 2
-LR = 1e-1
-EPOCHS = 100
+LR = 1e-2
+EPOCHS = 1000
 BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -302,14 +302,10 @@ def main():
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
     )
 
-    n = 2000
-    # Generate unique random indices
-    indices = torch.randperm(len(X_test))[:n]
-    # Select samples
-    test_samples = X_test[indices]
     contributions, predicted_classes = compute_global_explain_piecewise_linear_act(
         net=model,
-        X=test_samples,
+        X=X_test,
+        task="regression",
         n_expl_per_sample=10,
         n_classes=1,
         pred_threshold=0.5,

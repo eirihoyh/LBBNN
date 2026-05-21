@@ -300,8 +300,8 @@ def plot_global_explain_piecewise_linear_act(
     variable_names: Sequence[Any] | None = None,
     class_names: Sequence[Any] | None = None,
     covariate_indices: Sequence[int] | None = None,
-    fig_size: tuple[float, float] = (10, 4),
-    violin_width: float = 1.0,
+    fig_size: tuple[float, float] = (10, 6),
+    violin_width: float = 1.5,
     save_path: str | None = None,
     show: bool = False,
 ) -> list[str]:
@@ -373,26 +373,39 @@ def plot_global_explain_piecewise_linear_act(
 
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(111)
-        sns.set(style="whitegrid")
+        sns.set_theme(style="whitegrid")
 
         if task == "regression":
             dfm = df[selected_cols].melt(var_name="covariates", value_name="β-value")
-            sns.violinplot(
-                data=dfm,
-                x="covariates",
-                y="β-value",
-                cut=0,
-                width=violin_width,
-                inner=None,
-                ax=ax,
+            
+            # Draw violins using matplotlib directly
+            data_per_covariate = [
+                dfm[dfm["covariates"] == col]["β-value"].values for col in selected_cols
+            ]
+            parts = ax.violinplot(
+                data_per_covariate,
+                positions=range(len(selected_cols)),
+                widths=violin_width * 0.4,
+                showmedians=False,
+                showextrema=False,
             )
-            # Overlay quartile lines manually with offset towards center
+            for pc in parts["bodies"]:
+                pc.set_facecolor("steelblue")
+                pc.set_alpha(0.7)
+                pc.set_edgecolor("k")
+                pc.set_linewidth(0.5)
+
+            # Overlay quartile lines
             for i, covariate in enumerate(selected_cols):
-                for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
-                    subset = dfm[dfm["covariates"] == covariate]["β-value"]
-                    q05, q50, q95 = np.percentile(subset, [5, 50, 95])
-                    ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
-                    ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+                subset = dfm[dfm["covariates"] == covariate]["β-value"]
+                q05, q50, q95 = np.percentile(subset, [5, 50, 95])
+                ax.vlines(i, q05, q95, linewidth=3, colors="k")
+                ax.scatter(i, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+
+            ax.set_xticks(range(len(selected_cols)))
+            ax.set_xticklabels(selected_cols, rotation=45, ha="right")
+            ax.set_xlabel("covariates")
+            ax.set_ylabel("β-value")
             mean_pred = predictions.mean()
             ax.set_title(
                 f"Global covariate contributions to model prediction "
@@ -418,7 +431,7 @@ def plot_global_explain_piecewise_linear_act(
                 hue="predictions",
                 split=True,
                 gap=0.1,
-                cut=0,
+                cut=2,
                 width=violin_width,
                 inner=None,
                 ax=ax,
