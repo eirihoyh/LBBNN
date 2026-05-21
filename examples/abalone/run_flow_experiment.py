@@ -8,11 +8,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import numpy as np
 import torch
 
+from sklearn.preprocessing import StandardScaler
+
 from LBBNN import (
     BayesianNetworkFlow,
-    get_data,
     train_epoch,
-    validate,
     clean_alpha,
     get_active_weights,
     plotting,
@@ -66,6 +66,12 @@ def main():
     X_train_original = np.column_stack((np.ones(len(X_train_original)),X_train_original))
     X_test_original = np.column_stack((np.ones(len(X_test_original)),X_test_original))
     
+    # Fit scaler on train data, excluding the bias column (index 0)
+    scaler = StandardScaler(with_std=False)
+    X_train_original[:, 1:] = scaler.fit_transform(X_train_original[:, 1:])
+    X_test_original[:, 1:] = scaler.transform(X_test_original[:, 1:])
+    
+
     X = torch.tensor(X_train_original, dtype=torch.float32)
     y = torch.tensor(y_train_original, dtype=torch.float32)
     X_test = torch.tensor(X_test_original, dtype=torch.float32)
@@ -266,6 +272,7 @@ def main():
         x_explain.detach(), 
         minimum=minimum,
         maximum=maximum,
+        task="regression",
         feature_index=1,
         n_samples=50,
         n_expl_per_sample=100)
@@ -275,6 +282,7 @@ def main():
         contributions_feature_1,
         predictions_feature_1,
         x_explain.detach().cpu().numpy(),
+        task="regression",
         feature_names=feature_names,
         feature_in_focus=1,
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_1")
@@ -285,6 +293,7 @@ def main():
         x_explain.detach(), 
         minimum=minimum,
         maximum=maximum,
+        task="regression",
         feature_index=2,
         n_samples=50,
         n_expl_per_sample=100)
@@ -294,6 +303,7 @@ def main():
         contributions_feature_2,
         predictions_feature_2,
         x_explain.detach().cpu().numpy(),
+        task="regression",
         feature_names=feature_names,
         feature_in_focus=2,
         save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
