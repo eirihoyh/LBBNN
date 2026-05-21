@@ -144,7 +144,9 @@ def main():
     # --------------------------------------------------------
     model.eval()
     with torch.no_grad():
-        test_prob = model(X_test, ensemble=False)
+        for i in range(100):
+            outputs[i] = model(X_test, ensemble=False, sample=True)
+        test_prob = outputs.mean(0)
         test_acc = multiclass_accuracy(test_prob, y_test)
 
     print(f"[LRT] Test accuracy: {test_acc:.4f}")
