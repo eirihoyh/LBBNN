@@ -190,10 +190,13 @@ def plot_what_if_explanations(
     contributions: NDArray[np.float64],
     predictions: NDArray[np.float64],
     data: Tensor,
+    task: Literal["binary", "multiclass", "regression"] = "binary",
+    n_classes: int = 1,
     feature_names: Sequence[str] | None = None,
     class_names: Sequence[str] | None = None,
     feature_in_focus: int | None = None,
     no_zero_contributions: bool = True,
+    pred_threshold: float = 0.5,
     save_path: str | None = None,
 ) -> None:
     """Plot feature contributions over a what-if intervention range.
@@ -202,14 +205,29 @@ def plot_what_if_explanations(
         observed_space: Evaluated values for the varied feature.
         contributions: Contribution values with shape
             ``(n_samples, n_features, n_expl_per_sample)``.
-        predictions: Predicted class indicators with shape
-            ``(n_samples, n_prediction_samples)``.
+        predictions: For ``"binary"`` and ``"multiclass"``, predicted
+            class indicators with shape
+            ``(n_samples, n_prediction_samples)``. For ``"regression"``,
+            continuous predicted values of the same shape.
         data: Original one-dimensional input tensor.
+        task: Type of prediction task. One of ``"binary"``,
+            ``"multiclass"``, or ``"regression"``. Controls how
+            predictions are visualised alongside contributions:
+            - ``"binary"``: red vertical lines where the mean prediction
+              crosses ``pred_threshold``.
+            - ``"multiclass"``: red vertical lines where the predicted
+              class (argmax) changes.
+            - ``"regression"``: mean predicted value plotted as a
+              continuous line on a secondary y-axis.
+        n_classes: Number of output classes. Used to correctly label
+            class names when ``task="multiclass"``. Ignored otherwise.
         feature_names: Optional names of the input features.
         class_names: Optional names of the output classes.
         feature_in_focus: Index of the adjusted feature.
         no_zero_contributions: Whether to exclude features whose
             contributions are zero across all samples.
+        pred_threshold: Decision threshold used to draw vertical lines
+            in the ``"binary"`` case. Ignored otherwise.
         save_path: Optional path prefix for saving the plot.
 
     Returns:
@@ -218,7 +236,6 @@ def plot_what_if_explanations(
     plt, _, _ = get_matplotlib()
 
     n_features = contributions.shape[1]
-    n_classes = predictions.shape[1]
 
     if feature_names is None:
         feature_names = [f"x_{i}" for i in range(n_features)]
@@ -248,7 +265,7 @@ def plot_what_if_explanations(
     linestyles = ["-", "--", ":", "-."]
     style_cycler = itertools.cycle(linestyles)
 
-    plt.figure(figsize=(13.5, 5))
+    fig, ax1 = plt.subplots(figsize=(13.5, 5))
 
     for feature_idx in range(n_features):
         lower, median, upper = np.quantile(
@@ -256,43 +273,92 @@ def plot_what_if_explanations(
             [0.025, 0.5, 0.975],
             axis=1,
         )
-
-        plt.plot(
+        ax1.plot(
             observed_space,
             median,
             linestyle=next(style_cycler),
             label=feature_names[feature_idx],
             linewidth=2.5,
         )
-        plt.fill_between(observed_space, lower, upper, alpha=0.2)
+        ax1.fill_between(observed_space, lower, upper, alpha=0.2)
 
-    pred_changes = np.where(predictions.mean(axis=1) > 0.5)[0]
-    if pred_changes.size > 0:
-        for pred_change in pred_changes[:-1]:
-            plt.axvline(
-                x=observed_space[pred_change],
+    ax1.set_xlabel(f"New {feature_names[feature_in_focus]} Value")
+    ax1.set_ylabel("Contribution (∇f(x))")
+
+    if task == "binary":
+        pred_changes = np.where(predictions.mean(axis=1) > pred_threshold)[0]
+        if pred_changes.size > 0:
+            for pred_change in pred_changes[:-1]:
+                ax1.axvline(
+                    x=observed_space[pred_change],
+                    color="red",
+                    linestyle="-",
+                    alpha=0.125,
+                    linewidth=2.5,
+                )
+            ax1.axvline(
+                x=observed_space[pred_changes[-1]],
                 color="red",
                 linestyle="-",
                 alpha=0.125,
                 linewidth=2.5,
+                label=f"Prediction > {pred_threshold}",
             )
-        plt.axvline(
-            x=observed_space[pred_changes[-1]],
+
+    elif task == "multiclass":
+        predicted_classes = predictions.mean(axis=1).argmax(axis=1)
+        class_changes = np.where(np.diff(predicted_classes) != 0)[0]
+        if class_changes.size > 0:
+            for change in class_changes[:-1]:
+                ax1.axvline(
+                    x=observed_space[change],
+                    color="red",
+                    linestyle="-",
+                    alpha=0.125,
+                    linewidth=2.5,
+                )
+            ax1.axvline(
+                x=observed_space[class_changes[-1]],
+                color="red",
+                linestyle="-",
+                alpha=0.125,
+                linewidth=2.5,
+                label="Predicted class change",
+            )
+
+    elif task == "regression":
+        ax2 = ax1.twinx()
+        lower_pred, mean_preds, upper_pred = np.quantile(
+            predictions,
+            [0.025, 0.5, 0.975],
+            axis=1,
+        )
+        ax2.plot(
+            observed_space,
+            mean_preds,
             color="red",
             linestyle="-",
-            alpha=0.125,
             linewidth=2.5,
-            label="Prediction=1",
+            label="Mean prediction",
+            alpha=0.7,
         )
+        ax2.fill_between(
+            observed_space,
+            lower_pred,
+            upper_pred,
+            color="red",
+            alpha=0.2,
+        )
+        ax2.set_ylabel("Predicted value")
+        ax2.legend(loc="upper right")
 
-    plt.xlabel(f"New {feature_names[feature_in_focus]} Value")
-    plt.ylabel("Contribution (∇f(x))")
-    plt.title(
+    ax1.set_title(
         "Covariate contributions. "
         f"{feature_names[feature_in_focus]} is adjusted. "
         f"{original_value}"
     )
-    plt.legend()
+    ax1.legend(loc="upper left")
+    plt.tight_layout()
 
     if save_path is not None:
         output_path = Path(f"{save_path}.png")
@@ -310,8 +376,9 @@ def plot_global_explain_piecewise_linear_act(
     class_names: Sequence[Any] | None = None,
     covariate_indices: Sequence[int] | None = None,
     no_zero_contributions: bool = True,
+    split: bool = True,
     fig_size: tuple[float, float] = (10, 6),
-    violin_width: float = 1.5,
+    violin_width: float = 1.0,
     save_path: str | None = None,
     show: bool = False,
 ) -> list[str]:
@@ -319,9 +386,11 @@ def plot_global_explain_piecewise_linear_act(
 
     For binary classification, a single violin plot is produced with
     predicted class as the hue. For multi-class problems, one violin plot
-    is produced per class. For regression, a single violin plot without
-    class-based hue splitting is produced, with the mean predicted value
-    annotated in the title.
+    is produced per class, showing contributions of samples predicted to
+    belong to that class against all others, with zero-contribution
+    filtering applied per class. For regression, a single violin plot
+    without class-based hue splitting is produced, with the mean predicted
+    value annotated in the title.
 
     Args:
         contributions: Contributions array of shape
@@ -342,10 +411,17 @@ def plot_global_explain_piecewise_linear_act(
         covariate_indices: Indices of the feature columns to include in
             the violin plot. Defaults to all features.
         no_zero_contributions: Whether to exclude features whose
-            contributions are zero across all samples and classes.
+            contributions are zero across all samples. For multiclass,
+            filtering is applied per class so that only features relevant
+            to each specific class are shown.
+        split: Whether to show a split violin plot with both predicted
+            and non-predicted class contributions side by side. When
+            ``False``, only samples predicted as the current class are
+            shown in a single violin. Applies to both ``"binary"`` and
+            ``"multiclass"`` tasks.
         fig_size: Figure size passed to matplotlib.
         violin_width: Width of the violin plots. Increase beyond the
-            default of ``1.5`` for wider violins when fewer covariates
+            default of ``1.0`` for wider violins when fewer covariates
             are displayed, or reduce it when many covariates are shown.
         save_path: Optional file prefix for saving plots. When
             ``task="multiclass"`` a class index suffix is appended before
@@ -370,7 +446,8 @@ def plot_global_explain_piecewise_linear_act(
     else:
         class_names_list = list(class_names)
 
-    if no_zero_contributions:
+    # For binary and regression, filter globally before the loop
+    if no_zero_contributions and task != "multiclass":
         keep = ~(contributions == 0).all(axis=(0, 2))
         contributions = contributions[:, keep, :]
         variable_names_list = [name for name, k in zip(variable_names_list, keep) if k]
@@ -378,24 +455,38 @@ def plot_global_explain_piecewise_linear_act(
     if covariate_indices is None:
         covariate_indices = list(range(contributions.shape[1]))
 
-    selected_cols = [variable_names_list[i] for i in covariate_indices]
     saved_paths: list[str] = []
     n_plots = 1 if task in ("binary", "regression") else n_classes
 
     for class_idx in range(n_plots):
-        df = pd.DataFrame(
-            contributions[:, :, class_idx],
-            columns=variable_names_list,
-        )
+
+        # For multiclass, filter zero contributions per class
+        if no_zero_contributions and task == "multiclass":
+            keep = ~(contributions[:, :, class_idx] == 0).all(axis=0)
+            class_contributions = contributions[:, keep, class_idx]
+            class_variable_names = [
+                name for name, k in zip(variable_names_list, keep) if k
+            ]
+        else:
+            class_contributions = contributions[:, :, class_idx]
+            class_variable_names = variable_names_list
+
+        class_selected_cols = [
+            class_variable_names[i]
+            for i in covariate_indices
+            if i < len(class_variable_names)
+        ]
+
+        df = pd.DataFrame(class_contributions, columns=class_variable_names)
 
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(111)
         sns.set_theme(style="whitegrid")
 
         if task == "regression":
+            selected_cols = [variable_names_list[i] for i in covariate_indices]
             dfm = df[selected_cols].melt(var_name="covariates", value_name="β-value")
-            
-            # Draw violins using matplotlib directly
+
             data_per_covariate = [
                 dfm[dfm["covariates"] == col]["β-value"].values for col in selected_cols
             ]
@@ -412,57 +503,80 @@ def plot_global_explain_piecewise_linear_act(
                 pc.set_edgecolor("k")
                 pc.set_linewidth(0.5)
 
-            # Overlay quartile lines
             for i, covariate in enumerate(selected_cols):
                 subset = dfm[dfm["covariates"] == covariate]["β-value"]
                 q05, q50, q95 = np.percentile(subset, [5, 50, 95])
                 ax.vlines(i, q05, q95, linewidth=3, colors="k")
-                ax.scatter(i, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+                ax.scatter(
+                    i, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3
+                )
 
             ax.set_xticks(range(len(selected_cols)))
             ax.set_xticklabels(selected_cols, rotation=45, ha="right")
-            ax.set_xlabel("covariates")
-            ax.set_ylabel("β-value")
             mean_pred = predictions.mean()
             ax.set_title(
                 f"Global covariate contributions to model prediction "
                 f"(mean predicted value: {mean_pred:.3f})"
             )
+
         else:
             if task == "binary":
-                df["predictions"] = predictions
                 hue_label = "Predicted class"
+                legend_labels = class_names_list[:2]
+                if split:
+                    df["predictions"] = predictions
+                else:
+                    df = df[predictions == class_idx]
             else:
-                df["predictions"] = (predictions == class_idx).astype(int)
                 hue_label = f"Predicted as {class_names_list[class_idx]}"
+                legend_labels = [class_names_list[class_idx]]
+                if split:
+                    df["predictions"] = (predictions == class_idx).astype(int)
+                else:
+                    df = df[predictions == class_idx]
 
-            dfm = df[selected_cols + ["predictions"]].melt(
-                "predictions",
-                var_name="covariates",
-                value_name="β-value",
-            )
-            sns.violinplot(
-                data=dfm,
-                x="covariates",
-                y="β-value",
-                hue="predictions",
-                split=True,
-                gap=0.1,
-                cut=2,
-                width=violin_width,
-                ax=ax,
-            )
+            if split:
+                dfm = df[class_selected_cols + ["predictions"]].melt(
+                    "predictions",
+                    var_name="covariates",
+                    value_name="β-value",
+                )
+                sns.violinplot(
+                    data=dfm,
+                    x="covariates",
+                    y="β-value",
+                    hue="predictions",
+                    split=True,
+                    gap=0.1,
+                    cut=2,
+                    width=violin_width,
+                    ax=ax,
+                )
 
-            # # Overlay quartile lines manually with offset towards center
-            # for i, covariate in enumerate(selected_cols):
-            #     for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
-            #         subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
-            #         q05, q50, q95 = np.percentile(subset, [5, 50, 95])
-            #         ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
-            #         ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+                handles, _ = ax.get_legend_handles_labels()
+                ax.legend(handles, legend_labels, title=hue_label)
+            else:
+                dfm = df[class_selected_cols].melt(
+                    var_name="covariates",
+                    value_name="β-value",
+                )
+                sns.violinplot(
+                    data=dfm,
+                    x="covariates",
+                    y="β-value",
+                    cut=2,
+                    width=violin_width,
+                    ax=ax,
+                )
+
+            ax.set_title(
+                f"Global covariate contributions — {class_names_list[class_idx]}"
+                if task == "multiclass"
+                else "Global covariate contributions to model prediction"
+            )
 
             handles, _ = ax.get_legend_handles_labels()
-            ax.legend(handles, class_names_list[:2], title=hue_label)
+            ax.legend(handles, legend_labels, title=hue_label)
             ax.set_title(
                 f"Global covariate contributions — {class_names_list[class_idx]}"
                 if task == "multiclass"

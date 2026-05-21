@@ -96,6 +96,8 @@ def what_if_explanations(
     feature_index: int,
     minimum: float,
     maximum: float,
+    task: Literal["binary", "multiclass", "regression"] = "binary",
+    n_classes: int = 1,
     n_samples: int = 1000,
     n_expl_per_sample: int = 10,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
@@ -107,37 +109,75 @@ def what_if_explanations(
         feature_index: Index of the feature to vary.
         minimum: Lower bound for the feature value.
         maximum: Upper bound for the feature value.
+        task: Type of prediction task. One of ``"binary"``,
+            ``"multiclass"``, or ``"regression"``. Controls how
+            predictions are stored:
+            - ``"binary"``: raw probabilities of shape
+              ``(n_samples, n_expl_per_sample)``.
+            - ``"multiclass"``: class probabilities of shape
+              ``(n_samples, n_expl_per_sample, n_classes)``.
+            - ``"regression"``: raw predicted values of shape
+              ``(n_samples, n_expl_per_sample)``.
+        n_classes: Number of output classes. Ignored when
+            ``task="binary"`` or ``task="regression"``.
         n_samples: Number of feature values to evaluate.
-        n_expl_per_sample: Number of explanation samples per feature value.
+        n_expl_per_sample: Number of explanation samples per feature
+            value.
 
     Returns:
         A tuple containing:
-            - The evaluated feature values.
-            - The local contributions for each feature value.
-            - The predicted class indicator for each feature value.
+            - The evaluated feature values of shape ``(n_samples,)``.
+            - The local contributions of shape
+              ``(n_samples, n_features, n_expl_per_sample)``.
+            - The predictions whose shape depends on ``task``:
+              ``(n_samples, n_expl_per_sample)`` for ``"binary"`` and
+              ``"regression"``, or
+              ``(n_samples, n_expl_per_sample, n_classes)`` for
+              ``"multiclass"``.
     """
     observed_space = np.linspace(minimum, maximum, num=n_samples)
     contributions = np.zeros(
         (n_samples, data.shape[0], n_expl_per_sample),
         dtype=float,
     )
-    predictions = np.zeros((n_samples, n_expl_per_sample), dtype=float)
+
+    if task == "multiclass":
+        predictions = np.zeros((n_samples, n_expl_per_sample, n_classes), dtype=float)
+        original_explanation, original_preds, _ = local_explain_piecewise_linear_act(
+            net,
+            data,
+            n_samples=n_expl_per_sample,
+            n_classes=n_classes,
+        )
+        original_preds_np = original_preds.detach().cpu().numpy().mean(axis=0)
+        class_index = int(original_preds_np.argmax())
+    else:
+        predictions = np.zeros((n_samples, n_expl_per_sample), dtype=float)
+        class_index = 0
 
     for i, adjusted_value in enumerate(observed_space):
         data_adjusted = data.clone()
-        data_adjusted[feature_index] = torch.tensor(adjusted_value, device=data.device)
+        data_adjusted[feature_index] = torch.tensor(
+            adjusted_value, device=data.device
+        )
 
         explanation, preds, _ = local_explain_piecewise_linear_act(
             net,
             data_adjusted,
             n_samples=n_expl_per_sample,
+            n_classes=n_classes,
         )
 
-        contributions[i] = explanation[:, :, 0].T
-        prediction_value = float(
-            preds[:, 0].detach().cpu().numpy().mean() > 0.5
-        )
-        predictions[i, :] = prediction_value
+        contributions[i] = explanation[:, :, class_index].T
+        preds_np = preds.detach().cpu().numpy()
+
+        if task == "binary" or task=="regression":
+            predictions[i] = preds_np[:, 0]
+        elif task == "multiclass":
+            predictions[i] = preds_np
+
+        else:
+            raise ValueError(f"task {task} is not valid. Should be 'binary', 'multiclass' or 'regression'.")
 
     return observed_space, contributions, predictions
 
