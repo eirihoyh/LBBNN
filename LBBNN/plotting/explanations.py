@@ -30,7 +30,7 @@ def plot_local_explain_piecewise_linear_act(
     class_names: Sequence[Any] | None = None,
     include_prediction: bool = True,
     include_bias: bool = True,
-    no_zero_contributions: bool = False,
+    no_zero_contributions: bool = True,
     fig_size: tuple[float, float] = (10, 6),
     cred_int: tuple[float, float] = (0.025, 0.975),
     ann: bool = False,
@@ -193,6 +193,7 @@ def plot_what_if_explanations(
     feature_names: Sequence[str] | None = None,
     class_names: Sequence[str] | None = None,
     feature_in_focus: int | None = None,
+    no_zero_contributions: bool = True,
     save_path: str | None = None,
 ) -> None:
     """Plot feature contributions over a what-if intervention range.
@@ -207,6 +208,8 @@ def plot_what_if_explanations(
         feature_names: Optional names of the input features.
         class_names: Optional names of the output classes.
         feature_in_focus: Index of the adjusted feature.
+        no_zero_contributions: Whether to exclude features whose
+            contributions are zero across all samples.
         save_path: Optional path prefix for saving the plot.
 
     Returns:
@@ -225,6 +228,12 @@ def plot_what_if_explanations(
 
     if feature_in_focus is None:
         feature_in_focus = 0
+
+    if no_zero_contributions:
+        keep = ~(contributions == 0).all(axis=(0, 2))
+        contributions = contributions[:, keep, :]
+        feature_names = [name for name, k in zip(feature_names, keep) if k]
+        n_features = contributions.shape[1]
 
     original_value = "Original input: " + ", ".join(
         f"{feature_names[i]}={data[i].item():.2f}"
@@ -300,6 +309,7 @@ def plot_global_explain_piecewise_linear_act(
     variable_names: Sequence[Any] | None = None,
     class_names: Sequence[Any] | None = None,
     covariate_indices: Sequence[int] | None = None,
+    no_zero_contributions: bool = True,
     fig_size: tuple[float, float] = (10, 6),
     violin_width: float = 1.5,
     save_path: str | None = None,
@@ -331,6 +341,8 @@ def plot_global_explain_piecewise_linear_act(
             titles and legend labels. Ignored for regression.
         covariate_indices: Indices of the feature columns to include in
             the violin plot. Defaults to all features.
+        no_zero_contributions: Whether to exclude features whose
+            contributions are zero across all samples and classes.
         fig_size: Figure size passed to matplotlib.
         violin_width: Width of the violin plots. Increase beyond the
             default of ``1.5`` for wider violins when fewer covariates
@@ -358,8 +370,13 @@ def plot_global_explain_piecewise_linear_act(
     else:
         class_names_list = list(class_names)
 
+    if no_zero_contributions:
+        keep = ~(contributions == 0).all(axis=(0, 2))
+        contributions = contributions[:, keep, :]
+        variable_names_list = [name for name, k in zip(variable_names_list, keep) if k]
+
     if covariate_indices is None:
-        covariate_indices = list(range(n_features))
+        covariate_indices = list(range(contributions.shape[1]))
 
     selected_cols = [variable_names_list[i] for i in covariate_indices]
     saved_paths: list[str] = []
@@ -433,17 +450,16 @@ def plot_global_explain_piecewise_linear_act(
                 gap=0.1,
                 cut=2,
                 width=violin_width,
-                inner=None,
                 ax=ax,
             )
 
-            # Overlay quartile lines manually with offset towards center
-            for i, covariate in enumerate(selected_cols):
-                for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
-                    subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
-                    q05, q50, q95 = np.percentile(subset, [5, 50, 95])
-                    ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
-                    ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
+            # # Overlay quartile lines manually with offset towards center
+            # for i, covariate in enumerate(selected_cols):
+            #     for class_val, offset in [(1, 0.01), (0, -0.01)]:  # Nudge each side inward
+            #         subset = dfm[(dfm["covariates"] == covariate) & (dfm["predictions"] == class_val)]["β-value"]
+            #         q05, q50, q95 = np.percentile(subset, [5, 50, 95])
+            #         ax.vlines(i + offset, q05, q95, linewidth=3, colors="k")
+            #         ax.scatter(i + offset, q50, color="white", s=10, edgecolors="k", linewidths=1, zorder=3)
 
             handles, _ = ax.get_legend_handles_labels()
             ax.legend(handles, class_names_list[:2], title=hue_label)
