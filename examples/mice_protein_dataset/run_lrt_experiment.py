@@ -264,7 +264,7 @@ def main():
         n_classes=n_classes,
         magnitude=True,
         include_potential_contribution=False,
-        variable_names=[f"x{i}" for i in range(len(x_explain))],
+        feature_names=[f"x{i}" for i in range(len(x_explain))],
         class_names=class_names,
         include_prediction=True,
         include_bias=True,

@@ -26,7 +26,7 @@ def plot_local_explain_piecewise_linear_act(
     n_classes: int = 1,
     magnitude: bool = True,
     include_potential_contribution: bool = True,
-    variable_names: Sequence[Any] | None = None,
+    feature_names: Sequence[Any] | None = None,
     class_names: Sequence[Any] | None = None,
     include_prediction: bool = True,
     include_bias: bool = True,
@@ -51,7 +51,7 @@ def plot_local_explain_piecewise_linear_act(
             contributions.
         include_potential_contribution: Whether to include potential
             contributions for zero-valued inputs.
-        variable_names: Optional names for the input variables.
+        feature_names: Optional names for the input variables.
         class_names: Optional names for the output classes.
         include_prediction: Whether to append the prediction to the plot.
         include_bias: Whether to include the bias term.
@@ -85,20 +85,20 @@ def plot_local_explain_piecewise_linear_act(
     else:
         class_names_list = [f"Class: {name}" for name in class_names]
 
-    if variable_names is None:
-        variable_names_list = [f"x{i}" for i in range(p)]
+    if feature_names is None:
+        feature_names_list = [f"x{i}" for i in range(p)]
     else:
-        variable_names_list = list(variable_names)
+        feature_names_list = list(feature_names)
 
-    variable_names_array = np.array(
+    feature_names_array = np.array(
         [
             f"{name}={float(input_data[i].detach().cpu().numpy()):.2f}"
-            for i, name in enumerate(variable_names_list)
+            for i, name in enumerate(feature_names_list)
         ]
     )
 
     if not include_bias:
-        variable_names_array = variable_names_array[1:]
+        feature_names_array = feature_names_array[1:]
         expl_values = expl_values[:, 1:]
         p -= 1
 
@@ -107,7 +107,7 @@ def plot_local_explain_piecewise_linear_act(
     for class_idx in range(n_classes):
         expl_class = copy.deepcopy(expl_values[:, :, class_idx])
         p_class = copy.deepcopy(p)
-        variable_names_class = copy.deepcopy(variable_names_array)
+        feature_names_class = copy.deepcopy(feature_names_array)
 
         if no_zero_contributions:
             if ann:
@@ -121,7 +121,7 @@ def plot_local_explain_piecewise_linear_act(
                 keep = ~(expl_class == 0).all(axis=0)
 
             expl_class = expl_class[:, keep]
-            variable_names_class = variable_names_class[keep]
+            feature_names_class = feature_names_class[keep]
             p_class = expl_class.shape[1]
 
         if include_prediction:
@@ -129,7 +129,7 @@ def plot_local_explain_piecewise_linear_act(
                 (expl_class, preds[:, class_idx : class_idx + 1].cpu().numpy()),
                 axis=1,
             )
-            variable_names_class = np.append(variable_names_class, "Prediction")
+            feature_names_class = np.append(feature_names_class, "Prediction")
             p_class += 1
 
         means = expl_class.mean(axis=0)
@@ -161,7 +161,7 @@ def plot_local_explain_piecewise_linear_act(
         )
         plt.xticks(
             range(p_class),
-            [str(variable_names_class[i]) for i in range(p_class)],
+            [str(feature_names_class[i]) for i in range(p_class)],
             rotation=90,
         )
         plt.grid()
@@ -372,7 +372,7 @@ def plot_global_explain_piecewise_linear_act(
     predictions: NDArray,
     n_classes: int = 1,
     task: Literal["binary", "multiclass", "regression"] = "binary",
-    variable_names: Sequence[Any] | None = None,
+    feature_names: Sequence[Any] | None = None,
     class_names: Sequence[Any] | None = None,
     covariate_indices: Sequence[int] | None = None,
     no_zero_contributions: bool = True,
@@ -404,7 +404,7 @@ def plot_global_explain_piecewise_linear_act(
         task: Type of prediction task. One of ``"binary"``,
             ``"multiclass"``, or ``"regression"``. Must match the value
             used in ``compute_global_explain_piecewise_linear_act``.
-        variable_names: Optional names for the input features. Defaults
+        feature_names: Optional names for the input features. Defaults
             to ``["x0", "x1", ...]``.
         class_names: Optional names for the output classes. Used in plot
             titles and legend labels. Ignored for regression.
@@ -436,10 +436,10 @@ def plot_global_explain_piecewise_linear_act(
 
     n_features = contributions.shape[1]
 
-    if variable_names is None:
-        variable_names_list = [f"x{i}" for i in range(n_features)]
+    if feature_names is None:
+        feature_names_list = [f"x{i}" for i in range(n_features)]
     else:
-        variable_names_list = list(variable_names)
+        feature_names_list = list(feature_names)
 
     if class_names is None:
         class_names_list = [f"Class {i}" for i in range(max(n_classes, 2))]
@@ -450,7 +450,7 @@ def plot_global_explain_piecewise_linear_act(
     if no_zero_contributions and task != "multiclass":
         keep = ~(contributions == 0).all(axis=(0, 2))
         contributions = contributions[:, keep, :]
-        variable_names_list = [name for name, k in zip(variable_names_list, keep) if k]
+        feature_names_list = [name for name, k in zip(feature_names_list, keep) if k]
 
     if covariate_indices is None:
         covariate_indices = list(range(contributions.shape[1]))
@@ -464,27 +464,27 @@ def plot_global_explain_piecewise_linear_act(
         if no_zero_contributions and task == "multiclass":
             keep = ~(contributions[:, :, class_idx] == 0).all(axis=0)
             class_contributions = contributions[:, keep, class_idx]
-            class_variable_names = [
-                name for name, k in zip(variable_names_list, keep) if k
+            class_feature_names = [
+                name for name, k in zip(feature_names_list, keep) if k
             ]
         else:
             class_contributions = contributions[:, :, class_idx]
-            class_variable_names = variable_names_list
+            class_feature_names = feature_names_list
 
         class_selected_cols = [
-            class_variable_names[i]
+            class_feature_names[i]
             for i in covariate_indices
-            if i < len(class_variable_names)
+            if i < len(class_feature_names)
         ]
 
-        df = pd.DataFrame(class_contributions, columns=class_variable_names)
+        df = pd.DataFrame(class_contributions, columns=class_feature_names)
 
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(111)
         sns.set_theme(style="whitegrid")
 
         if task == "regression":
-            selected_cols = [variable_names_list[i] for i in covariate_indices]
+            selected_cols = [feature_names_list[i] for i in covariate_indices]
             dfm = df[selected_cols].melt(var_name="covariates", value_name="β-value")
 
             data_per_covariate = [

@@ -256,7 +256,7 @@ def main():
         n_classes=1,
         magnitude=True,
         include_potential_contribution=False,
-        variable_names=feature_names,
+        feature_names=feature_names,
         class_names=["positive_class"],
         include_prediction=True,
         include_bias=True,
@@ -324,7 +324,7 @@ def main():
         predictions=predicted_classes,
         task="regression",
         n_classes=1,
-        variable_names=feature_names,
+        feature_names=feature_names,
         save_path=str(RESULTS_DIR / "global_explain"),
         show=True,
     )
