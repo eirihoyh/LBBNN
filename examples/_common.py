@@ -64,6 +64,22 @@ def binary_accuracy(
     y_hat = (y_prob >= threshold).float()
     return float((y_hat.view(-1) == y_true.view(-1)).float().mean().cpu())
 
+def multiclass_accuracy(
+    y_prob: Tensor, y_true: Tensor
+) -> float:
+    """Compute accuracy for multiclass classification.
+
+    Args:
+        y_prob: Predicted class probabilities of shape
+            ``(n_samples, n_classes)``.
+        y_true: Ground truth class indices of shape ``(n_samples,)``.
+
+    Returns:
+        Classification accuracy as a float.
+    """
+    y_hat = y_prob.argmax(dim=1)
+    return float((y_hat.view(-1) == y_true.view(-1)).float().mean().cpu())
+
 def regression_metrics(
     y_pred: Tensor, y_true: Tensor
 ) -> tuple[float, float, float]:
