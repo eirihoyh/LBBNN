@@ -136,24 +136,19 @@ def what_if_explanations(
               ``"multiclass"``.
     """
     observed_space = np.linspace(minimum, maximum, num=n_samples)
-    contributions = np.zeros(
-        (n_samples, data.shape[0], n_expl_per_sample),
-        dtype=float,
-    )
 
     if task == "multiclass":
-        predictions = np.zeros((n_samples, n_expl_per_sample, n_classes), dtype=float)
-        original_explanation, original_preds, _ = local_explain_piecewise_linear_act(
-            net,
-            data,
-            n_samples=n_expl_per_sample,
-            n_classes=n_classes,
+        contributions = np.zeros(
+            (n_samples, data.shape[0], n_expl_per_sample, n_classes),
+            dtype=float,
         )
-        original_preds_np = original_preds.detach().cpu().numpy().mean(axis=0)
-        class_index = int(original_preds_np.argmax())
+        predictions = np.zeros((n_samples, n_expl_per_sample, n_classes), dtype=float)
     else:
+        contributions = np.zeros(
+            (n_samples, data.shape[0], n_expl_per_sample),
+            dtype=float,
+        )
         predictions = np.zeros((n_samples, n_expl_per_sample), dtype=float)
-        class_index = 0
 
     for i, adjusted_value in enumerate(observed_space):
         data_adjusted = data.clone()
@@ -168,16 +163,12 @@ def what_if_explanations(
             n_classes=n_classes,
         )
 
-        contributions[i] = explanation[:, :, class_index].T
-        preds_np = preds.detach().cpu().numpy()
-
-        if task == "binary" or task=="regression":
-            predictions[i] = preds_np[:, 0]
-        elif task == "multiclass":
-            predictions[i] = preds_np
-
+        if task == "binary" or task == "regression":
+            contributions[i] = explanation.T
+            predictions[i] = preds[:,0].detach().cpu().numpy()
         else:
-            raise ValueError(f"task {task} is not valid. Should be 'binary', 'multiclass' or 'regression'.")
+            contributions[i] = explanation.transpose(1,0,2)
+            predictions[i] = preds.detach().cpu().numpy()
 
     return observed_space, contributions, predictions
 

@@ -190,6 +190,7 @@ def plot_what_if_explanations(
     contributions: NDArray[np.float64],
     predictions: NDArray[np.float64],
     data: Tensor,
+    net: BayesianNet | None = None,
     task: Literal["binary", "multiclass", "regression"] = "binary",
     n_classes: int = 1,
     feature_names: Sequence[str] | None = None,
@@ -202,13 +203,14 @@ def plot_what_if_explanations(
     """Plot feature contributions over a what-if intervention range.
 
     Args:
+        net: Trained network object when task="multiclass", else None.
         observed_space: Evaluated values for the varied feature.
         contributions: Contribution values with shape
             ``(n_samples, n_features, n_expl_per_sample)``.
-        predictions: For ``"binary"`` and ``"multiclass"``, predicted
-            class indicators with shape
-            ``(n_samples, n_prediction_samples)``. For ``"regression"``,
-            continuous predicted values of the same shape.
+        predictions: For ``"binary"`` and ``"regression"``, predicted
+            values of shape ``(n_samples, n_expl_per_sample)``. For
+            ``"multiclass"``, class probabilities of shape
+            ``(n_samples, n_expl_per_sample, n_classes)``.
         data: Original one-dimensional input tensor.
         task: Type of prediction task. One of ``"binary"``,
             ``"multiclass"``, or ``"regression"``. Controls how
@@ -216,9 +218,10 @@ def plot_what_if_explanations(
             - ``"binary"``: red vertical lines where the mean prediction
               crosses ``pred_threshold``.
             - ``"multiclass"``: red vertical lines where the predicted
-              class (argmax) changes.
+              class (argmax) changes. Contributions are shown for the
+              class predicted on the original input.
             - ``"regression"``: mean predicted value plotted as a
-              continuous line on a secondary y-axis.
+              continuous line on a secondary y-axis with uncertainty band.
         n_classes: Number of output classes. Used to correctly label
             class names when ``task="multiclass"``. Ignored otherwise.
         feature_names: Optional names of the input features.
@@ -245,6 +248,23 @@ def plot_what_if_explanations(
 
     if feature_in_focus is None:
         feature_in_focus = 0
+
+    # Determine the class associated with the original input
+    if task == "multiclass":
+        original_explanation, original_preds, _ = expl.local_explain_piecewise_linear_act(
+            net,
+            data,
+            n_samples=50,
+            n_classes=n_classes,
+        )
+        original_preds_np = original_preds.detach().cpu().numpy().mean(axis=0)
+        class_index = int(original_preds_np.argmax())
+        # Slice contributions to the originally predicted class
+        # contributions shape: (n_samples, n_features, n_expl_per_sample, n_classes)
+        # -> (n_samples, n_features, n_expl_per_sample)
+        contributions = contributions[:, :, :, class_index]
+    else:
+        class_index = 0
 
     if no_zero_contributions:
         keep = ~(contributions == 0).all(axis=(0, 2))
@@ -306,6 +326,7 @@ def plot_what_if_explanations(
             )
 
     elif task == "multiclass":
+        # predictions shape: (n_samples, n_expl_per_sample, n_classes)
         predicted_classes = predictions.mean(axis=1).argmax(axis=1)
         class_changes = np.where(np.diff(predicted_classes) != 0)[0]
         if class_changes.size > 0:
@@ -352,8 +373,16 @@ def plot_what_if_explanations(
         ax2.set_ylabel("Predicted value")
         ax2.legend(loc="upper right")
 
+    if task == "multiclass":
+        class_label = (
+            f" — Contributions for originally predicted class: "
+            f"{class_names[class_index]} "
+            f"(mean probability: {original_preds_np[class_index]:.2f})"
+        )
+    else:
+        class_label = ""
     ax1.set_title(
-        "Covariate contributions. "
+        f"Covariate contributions{class_label}. "
         f"{feature_names[feature_in_focus]} is adjusted. "
         f"{original_value}"
     )
