@@ -239,6 +239,8 @@ def main():
         x=x_explain.detach().cpu().numpy(),
     )
 
+    feature_names = ["Bias", "Length", "Diameter", "Height", "Whole weight", "Shucked weight", "Viscera weight", "Shell weight", "Sex_I", "Sex_M"]
+
     plotting.plot_local_explain_piecewise_linear_act(
         net=model,
         input_data=x_explain,
@@ -248,18 +250,15 @@ def main():
         n_classes=1,
         magnitude=True,
         include_potential_contribution=False,
-        variable_names=[f"x{i}" for i in range(len(x_explain))],
+        variable_names=feature_names,
         class_names=["positive_class"],
         include_prediction=True,
         include_bias=True,
-        no_zero_contributions=False,
+        no_zero_contributions=True,
         save_path=str(RESULTS_DIR / "local_explanation_plot"),
         show=False,
     )
 
-    feature_names = ["Bias", "Length", "Diameter", "Height", "Whole weight", "Shucked weight", "Viscera weight", "Shell weight", "Sex_I", "Sex_M"]
-
-    
     minimum, maximum = X_test.detach().cpu().numpy().min(), X_test.detach().cpu().numpy().max()
 
     observed_space, contributions_feature_1, predictions_feature_1 = what_if_explanations(
@@ -303,7 +302,7 @@ def main():
 
     contributions, predicted_classes = compute_global_explain_piecewise_linear_act(
         net=model,
-        X=X_test,
+        X=X_train_original,
         task="regression",
         n_expl_per_sample=10,
         n_classes=1,
