@@ -117,7 +117,7 @@ def main():
             p=p,
             device=DEVICE,
             nr_weights=nr_weights,
-            task="binary",
+            task="regression",
             verbose=False,
         )
 
