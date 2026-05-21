@@ -10,9 +10,7 @@ import torch
 
 from LBBNN import (
     BayesianNetworkFlow,
-    get_data,
     train_epoch,
-    validate,
     clean_alpha,
     get_active_weights,
     plotting,
@@ -65,7 +63,7 @@ def main():
     # Include bias/intercept column into data
     X_train_original = np.column_stack((np.ones(len(X_train_original)),X_train_original))
     X_test_original = np.column_stack((np.ones(len(X_test_original)),X_test_original))
-    
+
     X = torch.tensor(X_train_original, dtype=torch.float32)
     y = torch.tensor(y_train_original, dtype=torch.float32)
     X_test = torch.tensor(X_test_original, dtype=torch.float32)
@@ -95,6 +93,8 @@ def main():
         classification=True,
         n_classes=1,
         act_func=torch.relu,
+        lower_init_alpha=0.60,
+        upper_init_alpha=0.75,
     ).to(DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
