@@ -2,13 +2,30 @@
 
 Python package for **latent binary Bayesian neural networks (LBBNN)**, including both **LRT-based** and **FLOW-based** implementations with **input skip-connections**.
 
-This repository provides implementations, utilities, and example scripts for experimenting with sparse Bayesian neural architectures designed to support both **predictive performance** and **structural interpretability**. In addition to the core models, the package includes tools for:
+This repository provides implementations, utilities, and example scripts for experimenting with sparse Bayesian neural network architectures designed to support both **predictive performance** and **structural interpretability**. The repository currently includes implementations of the following model families:
 
-- synthetic data generation,
-- training and evaluation,
-- extraction of global network structure,
-- local explanation,
-- and visualization of learned sparse architectures.
+- **LRT-based LBBNNs**
+  - Latent binary Bayesian neural networks (LBBNNs) using the local reparameterization trick (LRT),
+  - with input skip-connections to support sparse but expressive architectures.
+
+- **FLOW-based LBBNNs**
+  - Latent binary Bayesian neural networks (LBBNNs) whose weight modeling incorporates normalizing-flow components,
+  - again with input skip-connections, allowing more flexible posterior structure.
+
+- **LRT-CNN**
+  - Convolutional variant of the LRT-based LBBNN
+
+- **FLOW-CNN**
+  - Convolutional variant of the FLOW-based LBBNN
+
+In addition, the package contains utilities for:
+
+- generating synthetic data for experimentation,
+- training and validating models,
+- extracting and saving global structural summaries,
+- generating local contribution plots for individual observations,
+- generating global explanations based on local contributions,
+- and visualizing learned sparse networks.
 
 There is also an R-package version of LBBNN, which can be found [here](https://github.com/LarsELund/LBBNN).
 
@@ -74,36 +91,6 @@ Users should therefore expect that:
 - certain helper functions may be reorganized,
 - additional examples and tests may be added,
 - and documentation may be expanded as the project matures.
-
----
-
-## Overview
-
-The repository currently includes implementations of the following model families:
-
-- **LRT-based LBBNNs**
-  - Latent binary Bayesian neural networks (LBBNNs) using the local reparameterization trick (LRT),
-  - with input skip-connections to support sparse but expressive architectures.
-
-- **FLOW-based LBBNNs**
-  - Latent binary Bayesian neural networks (LBBNNs) whose weight modeling incorporates normalizing-flow components,
-  - again with input skip-connections, allowing more flexible posterior structure.
-
-- **LRT-CNN**
-  - Convolutional variant of the LRT-based LBBNN
-
-- **FLOW-CNN**
-  - Convolutional variant of the FLOW-based LBBNN
-
-In addition, the package contains utilities for:
-
-- generating synthetic data for experimentation,
-- training and validating models,
-- extracting and saving global structural summaries,
-- generating local contribution plots for individual observations,
-- generating global explanations based on local contributions,
-- and visualizing learned sparse networks.
-
 
 ---
 
@@ -505,22 +492,6 @@ This repository is intended primarily for:
 - and development of interpretable Bayesian models with learned latent structure.
 
 It may also be useful as a starting point for downstream applications where a sparse, interpretable neural network architecture is desirable.
-
----
-
-## Development workflow
-
-A recommended development workflow is:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev,plot]"
-python -m pytest -q
-```
-
-This setup supports iterative development, testing, and experimentation.
 
 ---
 
