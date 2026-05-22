@@ -166,7 +166,7 @@ def plot_whole_path_graph(
     all_connections: list[Any],
     save_path: str | None = None,
     show: bool = False,
-    show_edge_labels: bool = False,
+    show_edge_labels: bool = True,
     splines: str = "line",
     rankdir: Literal["TB", "LR"] = "LR",
 ) -> Any:
@@ -202,7 +202,7 @@ def plot_whole_path_graph_weight(
     all_connections: list[Any],
     save_path: str | None = None,
     show: bool = False,
-    show_edge_labels: bool = False,
+    show_edge_labels: bool = True,
     splines: str = "line",
     rankdir: Literal["TB", "LR"] = "LR",
 ) -> Any:
@@ -238,7 +238,7 @@ def run_path_graph(
     threshold: float = 0.5,
     save_path: str | None = None,
     show: bool = False,
-    show_edge_labels: bool = False,
+    show_edge_labels: bool = True,
     splines: str = "line",
     rankdir: Literal["TB", "LR"] = "LR",
 ) -> Any:
@@ -278,7 +278,7 @@ def run_path_graph_weight(
     save_path: str | None = None,
     show: bool = False,
     flow: bool = False,
-    show_edge_labels: bool = False,
+    show_edge_labels: bool = True,
     splines: str = "line",
     rankdir: Literal["TB", "LR"] = "LR",
 ) -> Any:
@@ -318,7 +318,7 @@ def plot_path_individual_classes(
     classes: int,
     path: str | None = None,
     show: bool = False,
-    show_edge_labels: bool = False,
+    show_edge_labels: bool = True,
     splines: str = "line",
     rankdir: Literal["TB", "LR"] = "LR",
 ) -> list[str]:
