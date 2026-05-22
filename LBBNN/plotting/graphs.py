@@ -7,31 +7,6 @@ from .._types import BayesianNet
 from .. import inspection as insp
 
 
-def _format_node_name(
-    index: int,
-    layer_ind: int,
-    dim: int,
-    n_layers: int,
-    layer_names: list[str],
-) -> str:
-    """Create a readable node name for a graph node.
-
-    Args:
-        index: Node index within the layer connection matrix.
-        layer_ind: Index of the current layer.
-        dim: Width of the non-skip part of the layer.
-        n_layers: Total number of graph layers including input and output.
-        layer_names: Human-readable names for each layer.
-
-    Returns:
-        A string representing the graph node name.
-    """
-    if index >= dim and layer_ind < n_layers:
-        return f"I_{index - dim}"
-
-    return f"{layer_names[layer_ind]}_{index}"
-
-
 def _build_path_graph(
     value_list: list[Any],
     all_connections: list[Any],
