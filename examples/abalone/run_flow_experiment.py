@@ -16,6 +16,8 @@ from LBBNN import (
     clean_alpha,
     get_active_weights,
     plotting,
+    get_alphas,
+    weight_matrices_numpy,
     local_explain_piecewise_linear_act,
     weight_matrices,
     what_if_explanations,
@@ -41,7 +43,7 @@ DIM = 200
 HIDDEN_LAYERS = 2
 NUM_TRANSFORMS = 2
 LR = 1e-2
-EPOCHS = 1000
+EPOCHS = 5000
 BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -100,7 +102,9 @@ def main():
         num_transforms=NUM_TRANSFORMS,
         classification=False,
         n_classes=1,
-        act_func=torch.relu,
+        act_func=torch.relu,    
+        lower_init_alpha=0.15,
+        upper_init_alpha=0.25,
     ).to(DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
@@ -135,7 +139,7 @@ def main():
         )
 
         print(
-            f"[FLOW] Epoch {epoch:03d} | "
+            f"[FLOW] Epoch {epoch:04d} | "
             f"kl_model={model.kl():.4f} | "
             f"train_nll={train_loss:.4f} | "
         )
@@ -143,9 +147,11 @@ def main():
     # --------------------------------------------------------
     # 4. Final test evaluation
     # --------------------------------------------------------
-    model.eval()
+    outputs = torch.zeros(1000, X_test.shape[0],1).to(DEVICE)
     with torch.no_grad():
-        test_pred = model(X_test, ensemble=False).view(-1)
+        for i in range(1000):
+            outputs[i] = model(X_test, ensemble=False, sample=True)
+        test_pred = outputs.mean(0)[:,0]
         test_r2, test_correlation, test_mse = regression_metrics(test_pred, y_test)
 
     print(f"[FLOW] Test r2: {test_r2:.4f} | Test corr: {test_correlation:.4f} | Test mse: {test_mse:.4f} | ")
@@ -189,9 +195,12 @@ def main():
 
     plotting.save_metrics(model, threshold=THRESHOLD, path=str(RESULTS_DIR / "network_metrics"))
 
+    alpha_list = get_alphas(model)
     alpha_clean = clean_alpha(model, threshold=THRESHOLD)
+    weight_list = weight_matrices_numpy(model, flow=True)
+    all_connections = get_active_weights(alpha_clean)
     active_connections = []
-    for layer_idx, coords in enumerate(get_active_weights(alpha_clean)):
+    for layer_idx, coords in enumerate(all_connections):
         layer_connections = coords.detach().cpu().tolist()
         active_connections.append(
             {
@@ -200,6 +209,7 @@ def main():
             }
         )
     save_json(active_connections, RESULTS_DIR / "active_connections.json")
+    _ = plotting.build_path_graph_table(alpha_list, weight_list, all_connections, save_path=str(RESULTS_DIR / "connections_in_active_paths"))
 
     # Optional path graph if graphviz is installed
     try:
@@ -208,13 +218,7 @@ def main():
             threshold=THRESHOLD,
             save_path=str(RESULTS_DIR / "path_graph"),
             show=False,
-        )
-        plotting.run_path_graph_weight(
-            model,
-            threshold=THRESHOLD,
-            save_path=str(RESULTS_DIR / "path_graph_weight"),
-            show=False,
-            flow=True
+            show_edge_labels=False
         )
         print("[FLOW] Saved path graph.")
     except Exception as exc:
@@ -265,50 +269,33 @@ def main():
         show=False,
     )
 
-    minimum, maximum = X_test.detach().cpu().numpy().min(), X_test.detach().cpu().numpy().max()
+    print("[FLOW] Saved local contribution plot.")
 
-    observed_space, contributions_feature_1, predictions_feature_1 = what_if_explanations(
-        model, 
-        x_explain.detach(), 
-        minimum=minimum,
-        maximum=maximum,
-        task="regression",
-        feature_index=1,
-        n_samples=50,
-        n_expl_per_sample=100)
-    
-    plotting.plot_what_if_explanations(
-        observed_space,
-        contributions_feature_1,
-        predictions_feature_1,
-        x_explain.detach().cpu().numpy(),
-        task="regression",
-        feature_names=feature_names,
-        feature_in_focus=1,
-        save_path=str(RESULTS_DIR / "what-if_explanation_feature_1")
-    )
+    for i in [1,2,3,4,5,6,7]:
 
-    observed_space, contributions_feature_2, predictions_feature_2 = what_if_explanations(
-        model, 
-        x_explain.detach(), 
-        minimum=minimum,
-        maximum=maximum,
-        task="regression",
-        feature_index=2,
-        n_samples=50,
-        n_expl_per_sample=100)
-    
-    plotting.plot_what_if_explanations(
-        observed_space,
-        contributions_feature_2,
-        predictions_feature_2,
-        x_explain.detach().cpu().numpy(),
-        task="regression",
-        feature_names=feature_names,
-        feature_in_focus=2,
-        save_path=str(RESULTS_DIR / "what-if_explanation_feature_2")
-    )
-    
+        minimum, maximum = X_test[:,i].detach().cpu().numpy().min(), X_test[:,i].detach().cpu().numpy().max()
+
+        observed_space, contributions_feature, predictions_feature = what_if_explanations(
+            model, 
+            x_explain.detach(), 
+            minimum=minimum,
+            maximum=maximum,
+            task="regression",
+            feature_index=i,
+            n_samples=50,
+            n_expl_per_sample=100)
+        
+        plotting.plot_what_if_explanations(
+            observed_space,
+            contributions_feature,
+            predictions_feature,
+            x_explain.detach().cpu().numpy(),
+            task="regression",
+            feature_names=feature_names,
+            feature_in_focus=i,
+            save_path=str(RESULTS_DIR / f"what-if_explanation_feature_{i}")
+        )
+    print("[FLOW] Saved 'what-if' predictions.")
 
     contributions, predicted_classes = compute_global_explain_piecewise_linear_act(
         net=model,
@@ -329,6 +316,7 @@ def main():
         show=True,
     )
 
+    print("[FLOW] Saved global explanation plot.")
     print(f"[FLOW] Saved all results to: {RESULTS_DIR.resolve()}")
 
 
