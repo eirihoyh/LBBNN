@@ -35,7 +35,7 @@ def get_data(
     rng = np.random.default_rng(seed)
     beta_array = np.asarray(beta, dtype=float)
 
-    x = rng.standard_normal((n, 2))
+    x = rng.standard_normal((n, 4))
     x_with_intercept = np.hstack([np.ones((x.shape[0], 1)), x])
 
     y = (
@@ -56,6 +56,8 @@ def get_data(
     if classification:
         probabilities = 1.0 / (1.0 + np.exp(-y))
         y = rng.binomial(1, probabilities).astype(float)
+    else:
+        y += np.random.normal(scale=0.5 , size=len(y))
 
     return x.astype(float), y.astype(float), x_with_intercept.astype(float)
 
