@@ -14,53 +14,9 @@ There is also an R-package version of LBBNN, which can be found [here](https://g
 
 ---
 
-## Repository status
-
-> **This repository is under active development.**
-
-The codebase is already usable for experimentation and methodological work, but it should still be regarded as a **research software repository** rather than a finalized production package. Interfaces, module organization, and utility functions may still evolve as the implementation is refined and expanded.
-
-Users should therefore expect that:
-
-- some APIs may change,
-- certain helper functions may be reorganized,
-- additional examples and tests may be added,
-- and documentation may be expanded as the project matures.
-
----
-
-## Overview
-
-The repository currently includes implementations of the following model families:
-
-- **LRT-based LBBNNs**
-  - Latent binary Bayesian neural networks (LBBNNs) using the local reparameterization trick (LRT),
-  - with input skip-connections to support sparse but expressive architectures.
-
-- **FLOW-based LBBNNs**
-  - Latent binary Bayesian neural networks (LBBNNs) whose weight modeling incorporates normalizing-flow components,
-  - again with input skip-connections, allowing more flexible posterior structure.
-
-- **LRT-CNN**
-  - Convolutional variant of the LRT-based LBBNN
-
-- **FLOW-CNN**
-  - Convolutional variant of the FLOW-based LBBNN
-
-In addition, the package contains utilities for:
-
-- generating synthetic data for experimentation,
-- training and validating models,
-- extracting and saving global structural summaries,
-- generating local contribution plots for individual observations,
-- generating global explanations based on local contributions,
-- and visualizing learned sparse networks.
-
----
-
 ## Installation
 
-It is recommended to install the package in a dedicated virtual environment.
+It is recommended to install the package in a dedicated virtual environment. First clone or download the repository, then run the commands provided below.
 
 ### Create and activate a virtual environment
 
@@ -105,9 +61,106 @@ Running the test suite is strongly recommended after substantial modifications t
 
 ---
 
+
+## Repository status
+
+> **This repository is under active development.**
+
+The codebase is already usable for experimentation and methodological work, but it should still be regarded as a **research software repository** rather than a finalized production package. Interfaces, module organization, and utility functions may still evolve as the implementation is refined and expanded.
+
+Users should therefore expect that:
+
+- some APIs may change,
+- certain helper functions may be reorganized,
+- additional examples and tests may be added,
+- and documentation may be expanded as the project matures.
+
+---
+
+## Overview
+
+The repository currently includes implementations of the following model families:
+
+- **LRT-based LBBNNs**
+  - Latent binary Bayesian neural networks (LBBNNs) using the local reparameterization trick (LRT),
+  - with input skip-connections to support sparse but expressive architectures.
+
+- **FLOW-based LBBNNs**
+  - Latent binary Bayesian neural networks (LBBNNs) whose weight modeling incorporates normalizing-flow components,
+  - again with input skip-connections, allowing more flexible posterior structure.
+
+- **LRT-CNN**
+  - Convolutional variant of the LRT-based LBBNN
+
+- **FLOW-CNN**
+  - Convolutional variant of the FLOW-based LBBNN
+
+In addition, the package contains utilities for:
+
+- generating synthetic data for experimentation,
+- training and validating models,
+- extracting and saving global structural summaries,
+- generating local contribution plots for individual observations,
+- generating global explanations based on local contributions,
+- and visualizing learned sparse networks.
+
+
+---
+
+## Toy Example - non-linear regression problem
+
+To showcase the package, we will go through a simple, non-linear example. 
+This [non-linear problem](examples/non_linear_examples/) has a simple structure that includes an interaction term:
+
+$$y = -1.0 + 1.5x_1 - 1.5x_2 + 0x_3 + 0x_4 + x_1 \cdot x_2 + \epsilon$$
+
+where $\epsilon\sim \mathcal{N}(0, 0.5^2)$.
+
+To approximate the non-linear structure, we initate both an LRT-based and a FLOW-based LBBNN with input skip, where both have 4 hidden layers and 20 hidden nodes in each hidden layer. We will focus on the LRT based implementation below, but all results can be found [here](examples/non_linear_examples/results_non_lin/).
+
+### Global explanations
+
+After training the [LRT-based Input-Skip LBBNN](examples/non_linear_examples/run_lrt_experiment.py), we got the following median probability model (MPM) structure:
+
+![Active paths in median probability model (MPM)](examples/non_linear_examples/results_non_lin/lrt_run/path_graph.png)
+
+$\text{I}\_\{n\}$ is the inputs, where $n=0$ inidcates the bias node, $n=1$ is $x_1$ and so on. $\text{H}\{l\}\_\{n\}$ is the $n^{th}$ hidden node in layer $l$, while $\text{Output}\_0$ is the output node. It can be noted here that neither $\text{I}\_3$ nor $\text{I}\_4$ is included in the MPM structure, meaning the model has successfully ignored them.
+
+Below are some of the values associated with the connection. The full list is provided [here](examples/non_linear_examples/results_non_lin/lrt_run/connections_in_active_paths.md).
+
+| From   | To       |      α |       w |
+|:-------|:---------|-------:|--------:|
+| I_0    | H3_12    | 1      |  1.468  |
+| I_2    | H3_12    | 1      | -1.8302 |
+| I_1    | H3_19    | 1      |  2.3094 |
+| I_2    | H3_19    | 0.9999 |  0.2899 |
+| H3_12  | H4_0     | 1      | -1.026  |
+| H3_19  | H4_0     | 0.983  | -3.2671 |
+| I_1    | H4_0     | 1      | -1.5614 |
+
+
+Local contributions can be used to see how the covariates contributes in general:
+
+![Global explanation based on local contributions](examples/non_linear_examples/results_non_lin/lrt_run/global_explain.png)
+
+
+### Local explanations
+
+When feeding the input $\{x_0 = 1, x_1 = -0.44, x_2 = -0.87, x_3 = -0.5, x_4 = 0.53\}$ through the MPM, we get the following local contributions back:
+
+![Local contribution single input](examples/non_linear_examples/results_non_lin/lrt_run/local_explanation_plot.png)
+
+Again, we note that both $x_3$ and $x_4$ does not contribute to the prediction. As the learned MPM strcutrues is non-linear, we may get different contributions when providing different inputs. The figure below shows how the contributions of covariate $x_0, x_1$ and $x_2$ and the prediction changes as the value of $x_1$ change. The predictions and the covariate contributions are plotted with both the mean value and the uncertainty.
+
+![what-if explanations](examples/non_linear_examples/results_non_lin/lrt_run/what-if_explanation_feature_1.png)
+
+
+
 ## Basic usage
 
 The package is designed to be used as a Python library. After installation, the main components can be imported directly from `LBBNN`.
+
+Multiple usage examples can be found in the [examples](/examples/) folder. Below are implementations for basic usage.
 
 ### Example: LRT-based network
 
@@ -279,7 +332,7 @@ explanation, preds, p = local_explain_piecewise_linear_act(
 
 ## Example scripts
 
-The repository contains example scripts in the `examples/` directory. These scripts are intended to provide minimal, reproducible demonstrations of how the package can be used.
+The repository contains example scripts in the [examples](examples/) directory. These scripts are intended to provide minimal, reproducible demonstrations of how the package can be used.
 
 Typical examples include:
 
