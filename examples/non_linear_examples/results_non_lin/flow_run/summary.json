@@ -7,11 +7,11 @@
   "dim": 20,
   "hidden_layers": 4,
   "num_transforms": 2,
-  "epochs": 500,
+  "epochs": 1000,
   "batch_size": 1024,
   "learning_rate": 0.05,
-  "test_r2": 0.9517002105712891,
-  "test_correlation": 0.9759634733200073,
-  "test_mse": 0.2772941589355469,
-  "final_kl": 305.7684326171875
+  "test_r2": 0.9512590169906616,
+  "test_correlation": 0.9753254055976868,
+  "test_mse": 0.2798271179199219,
+  "final_kl": 255.550048828125
 }

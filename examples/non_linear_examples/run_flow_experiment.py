@@ -51,7 +51,7 @@ DIM = 20
 HIDDEN_LAYERS = 4
 NUM_TRANSFORMS = 2
 LR = 5e-2
-EPOCHS = 500
+EPOCHS = 1000
 BATCH_SIZE = 1024
 THRESHOLD = 0.5
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -101,8 +101,8 @@ def main():
         classification=CLASSIFICATION,
         n_classes=1,
         act_func=torch.relu,
-        lower_init_alpha=0.25,
-        upper_init_alpha=0.35,
+        lower_init_alpha=0.15,
+        upper_init_alpha=0.25,
     ).to(DEVICE)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
@@ -148,7 +148,7 @@ def main():
         )
 
         print(
-            f"[FLOW] Epoch {epoch:03d} | "
+            f"[FLOW] Epoch {epoch:04d} | "
             f"kl_model={model.kl():.4f} | "
             f"train_nll={train_loss:.4f} | "
             f"val_nll={val_nll:.4f} | "

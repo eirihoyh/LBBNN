@@ -8,11 +8,11 @@
     "Output"
   ],
   "tot_weights": 1625,
-  "used_weights_median": 36.0,
-  "density_median": 0.022153846153846152,
-  "expected_nr_weights_full": 100.85095977783203,
-  "density_full": 0.06206212909405048,
-  "avg_path_length": 2.1818181818181817,
+  "used_weights_median": 32.0,
+  "density_median": 0.019692307692307693,
+  "expected_nr_weights_full": 101.44317626953125,
+  "density_full": 0.062426570012019234,
+  "avg_path_length": 1.9565217391304348,
   "include_inputs": [
     [
       false,
@@ -29,9 +29,9 @@
       false
     ],
     [
-      true,
-      true,
-      true,
+      false,
+      false,
+      false,
       false,
       false
     ],
@@ -44,44 +44,44 @@
     ],
     [
       false,
-      false,
+      true,
       false,
       false,
       false
     ]
   ],
   "input_inclusion_prob": {
-    "Prob I0 from I": 0.0024987668730318546,
-    "Prob I1 from I": 0.002477712230756879,
-    "Prob I2 from I": 0.002378599252551794,
-    "Prob I3 from I": 0.0025348125491291285,
-    "Prob I4 from I": 0.002514637541025877,
-    "Prob I0 from H1": 0.002763732336461544,
-    "Prob I1 from H1": 0.002739344257861376,
-    "Prob I2 from H1": 0.0026474252808839083,
-    "Prob I3 from H1": 0.002794553991407156,
-    "Prob I4 from H1": 0.0027839713729918003,
-    "Prob I0 from H2": 1.986022710800171,
-    "Prob I1 from H2": 3.8827273845672607,
-    "Prob I2 from H2": 5.8561859130859375,
-    "Prob I3 from H2": 0.004121808335185051,
-    "Prob I4 from H2": 0.004657848738133907,
-    "Prob I0 from H3": 4.008806228637695,
-    "Prob I1 from H3": 7.000661373138428,
-    "Prob I2 from H3": 7.0002970695495605,
-    "Prob I3 from H3": 0.0064643132500350475,
-    "Prob I4 from H3": 0.006888515781611204,
-    "Prob I0 from H4": 0.006053027231246233,
-    "Prob I1 from H4": 0.0252158772200346,
-    "Prob I2 from H4": 0.012499996460974216,
-    "Prob I3 from H4": 0.0007453315192833543,
-    "Prob I4 from H4": 0.0011736723827198148
+    "Prob I0 from I": 0.03904260694980621,
+    "Prob I1 from I": 0.03895944729447365,
+    "Prob I2 from I": 0.038712162524461746,
+    "Prob I3 from I": 0.038732562214136124,
+    "Prob I4 from I": 0.039115164428949356,
+    "Prob I0 from H1": 0.03927837312221527,
+    "Prob I1 from H1": 0.03930602967739105,
+    "Prob I2 from H1": 0.038803279399871826,
+    "Prob I3 from H1": 0.039928872138261795,
+    "Prob I4 from H1": 0.039148252457380295,
+    "Prob I0 from H2": 0.036916229873895645,
+    "Prob I1 from H2": 0.015551635064184666,
+    "Prob I2 from H2": 0.05349764600396156,
+    "Prob I3 from H2": 0.06862860172986984,
+    "Prob I4 from H2": 0.061044588685035706,
+    "Prob I0 from H3": 6.002739429473877,
+    "Prob I1 from H3": 8.999789237976074,
+    "Prob I2 from H3": 7.002388000488281,
+    "Prob I3 from H3": 0.004117658361792564,
+    "Prob I4 from H3": 0.004730681888759136,
+    "Prob I0 from H4": 0.00020868184219580144,
+    "Prob I1 from H4": 0.9999994039535522,
+    "Prob I2 from H4": 0.0008878904045559466,
+    "Prob I3 from H4": 2.3046473870635964e-05,
+    "Prob I4 from H4": 3.094868588959798e-05
   },
   "width_prob": {
     "0": 1.0,
     "1": 1.0,
     "2": 1.0,
-    "3": 0.016660819645039737,
-    "4": 0.018018645816482604
+    "3": 0.15143074091793096,
+    "4": 0.1440696361460141
   }
 }
