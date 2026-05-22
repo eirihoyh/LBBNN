@@ -107,23 +107,23 @@ To approximate the non-linear structure, we initate both an LRT-based and a FLOW
 
 ### Global explanations
 
-After training the [LRT-based Input-Skip LBBNN](examples/non_linear_examples/run_lrt_experiment.py), we got the following median probability model (MPM) structure:
+The results after training the [LRT-based Input-Skip LBBNN](examples/non_linear_examples/run_lrt_experiment.py) can be found [here](examples/non_linear_examples/results_non_lin/lrt_run/summary.json). $R^2$ was found to be $0.95$ and the final median probability model (MPM) consist of 35 weights. The following is the MPM structure:
 
 ![Active paths in median probability model (MPM)](examples/non_linear_examples/results_non_lin/lrt_run/path_graph.png)
 
-$\text{I}\_\{n\}$ is the inputs, where $n=0$ inidcates the bias node, $n=1$ is $x_1$ and so on. $\text{H}\{l\}\_\{n\}$ is the $n^{th}$ hidden node in layer $l$, while $\text{Output}\_0$ is the output node. It can be noted here that neither $\text{I}\_3$ nor $\text{I}\_4$ is included in the MPM structure, meaning the model has successfully ignored them.
+$\text{I}\_\{n\}$ is the inputs, where $n=0$ inidcates the bias node, $n=1$ is $x_1$ and so on. $\text{H}\{l\}\_\{n\}$ is the $n^{th}$ hidden node in layer $l$, while $\text{Output}\_0$ is the output node. It can be noted here that neither $\text{I}\_3$ nor $\text{I}\_4$ is included in the MPM structure, meaning the model has successfully ignored them. Additionally, the first three hidden layers are not included in the MPM, leaving a much simpler structure. The initial structure had 1625 weigths, while the final MPM used 32. 
 
 Below are some of the values associated with the connection. The full list is provided [here](examples/non_linear_examples/results_non_lin/lrt_run/connections_in_active_paths.md).
 
 | From   | To       |      α |       w |
 |:-------|:---------|-------:|--------:|
-| I_0    | H3_12    | 1      |  1.468  |
-| I_2    | H3_12    | 1      | -1.8302 |
-| I_1    | H3_19    | 1      |  2.3094 |
-| I_2    | H3_19    | 0.9999 |  0.2899 |
-| H3_12  | H4_0     | 1      | -1.026  |
-| H3_19  | H4_0     | 0.983  | -3.2671 |
-| I_1    | H4_0     | 1      | -1.5614 |
+| I_1    | H4_0     | 1      | -1.1263 |
+| I_2    | H4_0     | 1      |  0.9893 |
+| I_0    | H4_4     | 1      |  0.2957 |
+| I_1    | H4_4     | 1      | -1.4558 |
+| I_2    | H4_4     | 1      | -1.2381 |
+| I_0    | H4_5     | 1      | -4.2169 |
+| I_1    | H4_5     | 1      | -1.699  |
 
 
 Local contributions can be used to see how the covariates contributes in general:
@@ -133,11 +133,11 @@ Local contributions can be used to see how the covariates contributes in general
 
 ### Local explanations
 
-When feeding the input $\{x_0 = 1, x_1 = -0.44, x_2 = -0.87, x_3 = -0.5, x_4 = 0.53\}$ through the MPM, we get the following local contributions back:
+When feeding the input $\{x_0 = 1, x_1 = -0.44, x_2 = -0.87, x_3 = 0.81, x_4 = 0.92\}$ through the MPM, we get the following local contributions back:
 
 ![Local contribution single input](examples/non_linear_examples/results_non_lin/lrt_run/local_explanation_plot.png)
 
-Again, we note that both $x_3$ and $x_4$ does not contribute to the prediction. As the learned MPM strcutrues is non-linear, we may get different contributions when providing different inputs. The figure below shows how the contributions of covariate $x_0, x_1$ and $x_2$ and the prediction changes as the value of $x_1$ change. The predictions and the covariate contributions are plotted with both the mean value and the uncertainty.
+Again, we note that both $x_3$ and $x_4$ does not contribute to the prediction. As the learned MPM structure is non-linear, we may get different contributions when providing different inputs. The figure below shows how the contributions of covariate $x_0, x_1$ and $x_2$ and the prediction changes as the value of $x_1$ change. The predictions and the covariate contributions are plotted with both the mean value and the uncertainty.
 
 ![what-if explanations](examples/non_linear_examples/results_non_lin/lrt_run/what-if_explanation_feature_1.png)
 
