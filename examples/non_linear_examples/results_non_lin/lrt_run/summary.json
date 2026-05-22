@@ -1,0 +1,16 @@
+{
+  "model_type": "BayesianNetworkFlow",
+  "seed": 42,
+  "device": "cuda",
+  "n_samples": 20000,
+  "input_dim": 5,
+  "dim": 20,
+  "hidden_layers": 4,
+  "epochs": 500,
+  "batch_size": 1024,
+  "learning_rate": 0.05,
+  "test_r2": 0.9520969390869141,
+  "test_correlation": 0.9760955572128296,
+  "test_mse": 0.27501654624938965,
+  "final_kl": 0.0
+}

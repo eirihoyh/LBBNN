@@ -1,0 +1,87 @@
+{
+  "layer_names": [
+    "I",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "Output"
+  ],
+  "tot_weights": 1625,
+  "used_weights_median": 36.0,
+  "density_median": 0.022153846153846152,
+  "expected_nr_weights_full": 100.85095977783203,
+  "density_full": 0.06206212909405048,
+  "avg_path_length": 2.1818181818181817,
+  "include_inputs": [
+    [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      true,
+      true,
+      true,
+      false,
+      false
+    ],
+    [
+      true,
+      true,
+      true,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  ],
+  "input_inclusion_prob": {
+    "Prob I0 from I": 0.0024987668730318546,
+    "Prob I1 from I": 0.002477712230756879,
+    "Prob I2 from I": 0.002378599252551794,
+    "Prob I3 from I": 0.0025348125491291285,
+    "Prob I4 from I": 0.002514637541025877,
+    "Prob I0 from H1": 0.002763732336461544,
+    "Prob I1 from H1": 0.002739344257861376,
+    "Prob I2 from H1": 0.0026474252808839083,
+    "Prob I3 from H1": 0.002794553991407156,
+    "Prob I4 from H1": 0.0027839713729918003,
+    "Prob I0 from H2": 1.986022710800171,
+    "Prob I1 from H2": 3.8827273845672607,
+    "Prob I2 from H2": 5.8561859130859375,
+    "Prob I3 from H2": 0.004121808335185051,
+    "Prob I4 from H2": 0.004657848738133907,
+    "Prob I0 from H3": 4.008806228637695,
+    "Prob I1 from H3": 7.000661373138428,
+    "Prob I2 from H3": 7.0002970695495605,
+    "Prob I3 from H3": 0.0064643132500350475,
+    "Prob I4 from H3": 0.006888515781611204,
+    "Prob I0 from H4": 0.006053027231246233,
+    "Prob I1 from H4": 0.0252158772200346,
+    "Prob I2 from H4": 0.012499996460974216,
+    "Prob I3 from H4": 0.0007453315192833543,
+    "Prob I4 from H4": 0.0011736723827198148
+  },
+  "width_prob": {
+    "0": 1.0,
+    "1": 1.0,
+    "2": 1.0,
+    "3": 0.016660819645039737,
+    "4": 0.018018645816482604
+  }
+}

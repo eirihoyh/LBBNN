@@ -1,0 +1,84 @@
+strict digraph "All paths" {
+	graph [bgcolor=white nodesep=0.5 rankdir=LR ranksep=0.8 splines=line]
+	node [fillcolor=lightblue fontname=Helvetica fontsize=11 shape=box style="rounded,filled"]
+	edge [color=gray40 fontname=Helvetica fontsize=9]
+	I_0_at_2 [label=I_0 fillcolor=lightyellow shape=diamond]
+	H3_2
+	I_0_at_2 -> H3_2
+	I_1_at_2 [label=I_1 fillcolor=lightyellow shape=diamond]
+	I_1_at_2 -> H3_2
+	I_2_at_2 [label=I_2 fillcolor=lightyellow shape=diamond]
+	I_2_at_2 -> H3_2
+	H3_3
+	I_1_at_2 -> H3_3
+	I_2_at_2 -> H3_3
+	H3_7
+	I_0_at_2 -> H3_7
+	I_1_at_2 -> H3_7
+	I_2_at_2 -> H3_7
+	H3_14
+	I_0_at_2 -> H3_14
+	I_1_at_2 -> H3_14
+	I_2_at_2 -> H3_14
+	H4_0
+	H3_3 -> H4_0
+	H3_7 -> H4_0
+	I_0_at_3 [label=I_0 fillcolor=lightyellow shape=diamond]
+	I_0_at_3 -> H4_0
+	I_1_at_3 [label=I_1 fillcolor=lightyellow shape=diamond]
+	I_1_at_3 -> H4_0
+	I_2_at_3 [label=I_2 fillcolor=lightyellow shape=diamond]
+	I_2_at_3 -> H4_0
+	H4_9
+	H3_2 -> H4_9
+	H3_3 -> H4_9
+	H3_14 -> H4_9
+	I_1_at_3 -> H4_9
+	H4_12
+	H3_3 -> H4_12
+	I_1_at_3 -> H4_12
+	I_2_at_3 -> H4_12
+	H4_16
+	I_0_at_3 -> H4_16
+	I_1_at_3 -> H4_16
+	I_2_at_3 -> H4_16
+	Output_0
+	H4_0 -> Output_0
+	H4_9 -> Output_0
+	H4_12 -> Output_0
+	H4_16 -> Output_0
+	I_1_at_4 [label=I_1 fillcolor=lightyellow shape=diamond]
+	I_1_at_4 -> Output_0
+	I_2_at_4 [label=I_2 fillcolor=lightyellow shape=diamond]
+	I_2_at_4 -> Output_0
+	{
+		rank=same
+		I_0_at_2
+		I_1_at_2
+		I_2_at_2
+	}
+	{
+		rank=same
+		H3_2
+		H3_3
+		H3_7
+		H3_14
+		I_0_at_3
+		I_1_at_3
+		I_2_at_3
+	}
+	{
+		rank=same
+		H4_0
+		H4_9
+		H4_12
+		H4_16
+		I_1_at_4
+		I_2_at_4
+	}
+	{
+		rank=same
+		Output_0
+	}
+	"All paths" [shape=Msquare]
+}
