@@ -207,6 +207,14 @@ def main():
             model,
             threshold=THRESHOLD,
             save_path=str(RESULTS_DIR / "path_graph"),
+            show_edge_labels=False,
+            rankdir="TB",
+            show=False,
+        )
+        plotting.run_path_graph(
+            model,
+            threshold=THRESHOLD,
+            save_path=str(RESULTS_DIR / "path_graph_prob"),
             show=False,
         )
         plotting.run_path_graph_weight(
@@ -216,11 +224,17 @@ def main():
             show=False,
             flow=True
         )
-
         plotting.plot_path_individual_classes(
             model,
             classes=n_classes,
             path=str(RESULTS_DIR / "individual_classes_path_graph"),
+            show_edge_labels=False,
+            show=False,
+        )
+        plotting.plot_path_individual_classes(
+            model,
+            classes=n_classes,
+            path=str(RESULTS_DIR / "individual_classes_path_graph_prob"),
             show=False,
         )
         print("[FLOW] Saved path graph.")
