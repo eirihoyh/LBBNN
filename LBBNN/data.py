@@ -13,6 +13,7 @@ def get_data(
     classification: bool = True,
     non_lin: bool = False,
     squared_terms: bool = False,
+    x_spread: int | float = 1,
     seed: int | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Generate a simple two-dimensional synthetic dataset.
@@ -23,6 +24,7 @@ def get_data(
         classification: Whether to convert the target into binary labels.
         non_lin: Whether to add a multiplicative interaction term.
         squared_terms: Whether to add quadratic terms in each covariate.
+        x_spread: standard deviation for the sampled x data
         seed: Random seed for reproducibility. If ``None`` a fresh
             generator is used and results are non-deterministic.
 
@@ -35,7 +37,7 @@ def get_data(
     rng = np.random.default_rng(seed)
     beta_array = np.asarray(beta, dtype=float)
 
-    x = rng.standard_normal((n, 4))
+    x = rng.standard_normal((n, 4))*x_spread
     x_with_intercept = np.hstack([np.ones((x.shape[0], 1)), x])
 
     y = (
@@ -57,7 +59,7 @@ def get_data(
         probabilities = 1.0 / (1.0 + np.exp(-y))
         y = rng.binomial(1, probabilities).astype(float)
     else:
-        y += np.random.normal(scale=0.5 , size=len(y))
+        y += rng.normal(scale=0.5 , size=len(y))
 
     return x.astype(float), y.astype(float), x_with_intercept.astype(float)
 
