@@ -111,7 +111,7 @@ The results after training the [LRT-based Input-Skip LBBNN](examples/non_linear_
 
 ![Active paths in median probability model (MPM)](examples/non_linear_examples/results_non_lin/lrt_run/path_graph.png)
 
-$\text{I}\_\{n\}$ is the inputs, where $n=0$ inidcates the bias node, $n=1$ is $x_1$ and so on. $\text{H}\{l\}\_\{n\}$ is the $n^{th}$ hidden node in layer $l$, while $\text{Output}\_0$ is the output node. It can be noted here that neither $\text{I}\_3$ nor $\text{I}\_4$ is included in the MPM structure, meaning the model has successfully ignored them. Additionally, the first three hidden layers are not included in the MPM, leaving a much simpler structure. The initial structure had 1625 weigths, while the final MPM used 32. 
+I_$n$ is the inputs, where $n=0$ inidcates the bias node, $n=1$ is $x_1$ and so on. H$l$_$n$ is the $n^{th}$ hidden node in layer $l$, while Output_$0$ is the output node. It can be noted here that neither I_$3$ nor I_$4$ is included in the MPM structure, meaning the model has successfully ignored them. Additionally, the first three hidden layers are not included in the MPM, leaving a much simpler structure. The initial structure had 1625 weigths, while the final MPM used 32. 
 
 Below are some of the values associated with the connection. The full list is provided [here](examples/non_linear_examples/results_non_lin/lrt_run/connections_in_active_paths.md).
 
